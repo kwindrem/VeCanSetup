@@ -43,6 +43,7 @@ Setting up an authorization key (see documentation referenced above) will save t
 
 Note:
 I have only tested this package with CANable.
+CANbus hats that support two interfaces are at the most risk of working properly.
 The configurations for other interfaces was taken from
 
 https://github.com/victronenergy/venus/wiki/RaspberryPi-CAN-Interfaces
