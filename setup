@@ -1,0 +1,431 @@
+#!/bin/bash
+
+# setup for CANbus with CANable interface
+# both slcand and candlelight firmware supported here
+
+# installs shell scripts and udev rules
+
+# run manually initally, then called from reinstallMods
+# run manually with "uninstall" as first parameter to restore components to stock
+
+# installs CAN dBus services
+# ports is a space-separated list of possible VE.can ports
+# services in the servcies list are created for each port 
+# NOT SURE if all services are needed for each port. If so, this needs a rewrite!!!
+ports="can0 can1"
+services="can-bus-bms vecan-dbus mqtt-n2k"
+
+venusDir=/opt/victronenergy
+serviceDir=/service
+veCanPortsFile=/etc/venus/canbus_ports
+
+udevRulesDir="/etc/udev/rules.d"
+configFile="/u-boot/config.txt"
+
+
+binDir=/usr/local/bin
+
+# no log file
+packageLogFile=""
+
+#### following lines incorporate SetupHelper utilities into this script
+# Refer to the SetupHelper ReadMe file for details.
+
+source "/data/SetupHelper/CommonResources"
+
+if [ $scriptAction == 'EXIT' ] ; then
+    exit
+fi
+
+#### end of lines to include SetupHelper
+
+
+# CAN interfce templates - must be set after sourceing CommonResources
+templates="$scriptDir/templates"
+
+
+
+
+
+# this function reports to the console information about VeCan ports
+# identified in the canports file
+
+reportVeCanInfo ()
+{
+    echo
+    for port in $ports ; do
+        echo "information for $port"
+        udevPath=$(udevadm info -e | grep $port | grep P: | awk '{print $2}')
+        if [ -z $udevPath ]; then
+            echo "  no udev information available"
+        else
+            udevadm info -q all -p "$udevPath" > "$scriptDir/tmp"
+            bus=$(grep ID_BUS "$scriptDir/tmp" | awk -F= '{print $2}')
+            modelId=$(grep ID_MODEL_ID "$scriptDir/tmp" | awk -F= '{print $2}')
+            serial=$(grep ID_SERIAL_SHORT "$scriptDir/tmp" | awk -F= '{print $2}')
+            vendor=$(grep ID_VENDOR "$scriptDir/tmp" | grep -v ENC | grep -v FROM | grep -v _ID | awk -F= '{print $2}')
+            vendorId=$(grep ID_VENDOR_ID "$scriptDir/tmp" | awk -F= '{print $2}')
+
+            echo "  udev info  bus=$bus  vendor=$vendor  vendor id=$vendorId  model Id=$modelId serial=$serial"
+            rm -f "$scriptDir/tmp"
+        fi
+        
+        /bin/echo -n "  overlay: "
+        grep "$port" "$configFile" | grep -v "#"
+        if [ $? == 1 ]; then
+            echo "none"
+        fi
+
+        /bin/echo -n "  services: "        
+        services=$(cd $serviceDir; ls -d *$port 2>/dev/null)
+        if [ $? == 0 ]; then
+            echo $services
+        else
+            echo "none"
+        fi
+    done
+}
+
+displayPorts ()
+{
+    for port in $ports ; do
+        if [ -e  "$veCanPortsFile" ] && [ $(grep -c "$port" "$veCanPortsFile") != 0 ]; then
+            portActive=true
+            activeText="    active"
+        else
+            portActive=false
+            activeText="not active"
+        fi
+        if [ -d "$scriptDir/$port" ] && [ -f "$scriptDir/$port/description" ]; then
+            localInfo=true
+            description=$(cat "$scriptDir/$port/description")
+            localInfoText="$description"
+        else
+            localInfo=false
+            localInfoText="not defined"
+        fi
+
+        if ! $localInfo && $portActive ; then
+            stockText=" could be STOCK INTERFACE"
+        else
+            stockText=""
+        fi
+        echo "$port $activeText $localInfoText $stockText"
+    done
+}
+
+# prompts the user for the necssary information to create or modify an existing file set
+# this creates persistent storage that is for a manual install or automatic reinstall
+
+addFileSet ()
+{
+    displayPorts
+    echo
+    selectedPort=""
+    while true; do
+        /bin/echo -n "Choose an interface number from the list above (eg, 0 for can0) (cr to exit): "
+        read response
+        for port in $ports ; do
+            if [ "$port" == "can$response" ]; then
+                selectedPort=$port
+                break
+            fi
+        done
+        if [ -z $response ]; then
+            return
+        elif [ -z $selectedPort ]; then
+            echo "response ($response) not recognized"
+        else
+            break
+        fi
+    done
+
+    deviceTypes=($(ls -d "$templates"/*))
+    index=0
+    echo
+    while true; do
+        deviceDir=${deviceTypes[$index]}
+        if [ -z "$deviceDir" ]; then
+            break
+        fi
+        description=$(cat "$deviceDir/description")
+        ((itemNo = index + 1))
+        echo "$itemNo) $description"
+         ((index++))
+    done
+
+    response=''
+    choice=0
+    while true; do
+        /bin/echo -n "Choose a device type or $selectedPort from the list above (by number): "
+        read response
+        case $response in
+            [0-9]*)
+                choice=$response
+                break;; 
+            *)
+        esac
+    done
+    ((index = choice - 1 ))
+    deviceDir=${deviceTypes[$index]}
+    description=$(cat "$deviceDir/description")
+
+    #link template directory to one in scriptDir
+    baseName=$(basename "$deviceDir")
+    if [ -e "$scriptDir/templates/$baseName" ]; then
+        rm -rf "$scriptDir/$selectedPort"
+        ln -s "../templates/$baseName" "$scriptDir/$selectedPort"
+        echo
+        echo "$selectedPort configuration updated"
+        echo
+        echo "changes PENDING"
+        echo "select Install to apply them"
+    else
+        logMessage "ERROR template $baseName not found - can't create file set for $selectedPort"
+    fi
+}
+
+
+# removes a file set for the selected port(s)
+# this does NOT remove them from the Venus active directories
+#
+# $1 is the port
+
+removeFileSet ()
+{
+    fileSetFound=false
+    changes=false
+    for port in $ports ; do
+        if [ -e "$scriptDir/$port" ]; then
+            fileSetFound=true
+            yesNoPrompt "remove file set for $port (y/n)?:  "
+            if $yesResponse ; then
+                logMessage "removing file set for $port"
+                rm -rf "$scriptDir/$port"
+                changes=true
+            fi
+        fi
+    done
+    if ! $fileSetFound ; then
+        echo "no file sets found"
+    elif $changes ; then
+        echo
+        echo "changes PENDING"
+        echo "select Install to apply them"
+    fi
+}
+
+
+#### running manually - prompt for input
+if [ $scriptAction == 'NONE' ] ; then
+    # display innitial message
+    
+    interfaces=$(ls "$scriptDir")
+    
+    response=''
+    displayMessage=true
+    while true; do
+        if $displayMessage ; then
+            echo
+            echo "VeCan interfaces"
+            displayPorts
+            echo
+            echo "Available actions:"
+            echo "  Display interface information (d)"
+            echo "  Add / Modify interface configuration - does NOT activate it (a)"
+            echo "  Remove a local interface configurtaiton - does NOT deactivate it (r)"
+            echo "  Install and activate interfaces - updates active files from local copies (i)"
+            echo "  Uninstall (u) and restore all files to stock"
+            echo "  Quit (q) without further action"
+            echo "  Display setup log (l) outputs the last 100 lines of the log"
+            echo
+        fi
+
+        /bin/echo -n "Choose an action from the list above: "
+        read response
+        displayMessage=true
+        case $response in
+            [dD]*)
+                reportVeCanInfo
+                ;;
+            [aA]*)
+                addFileSet
+                ;;
+            [rR]*)
+                removeFileSet
+                ;;
+            [iI]*)
+                scriptAction='INSTALL'
+                break
+                ;;
+            [uU]*)
+                scriptAction='UNINSTALL'
+                break
+                ;;
+            [qQ]*)
+                exit
+                ;;
+            [lL]*)
+                displayLog $setupLogFile
+                ;;
+            *)
+                displayMessage=false
+                ;;
+        esac
+    done
+fi
+
+
+# updateCanFiles either installs or removes files associted with each port
+# the install/remove decision is based on the presence of a file set for each port
+# a package uninstall ignores the file sets and removes the port files
+# as well as restoring the VeCan ports file to stock
+
+updateCanFiles ()
+{
+    # treat uninstall as if there is nothing specified for the port
+    # all files for all ports will be removed/restored
+    if [ $scriptAction == 'UNINSTALL' ]; then
+        restoreActiveFile "$veCanPortsFile"
+        ignoreAllPorts=true
+    else
+        ignoreAllPorts=false
+    fi
+
+    rm -f "$scriptDir/tempPorts"
+    for port in $ports; do
+        # treat uninstall as if there is nothing specified for the port
+        if $ignoreAllPorts ; then
+                portDefined=false
+        else
+            thisFileSet="$scriptDir/$port"
+            if [ -e "$thisFileSet" ]; then
+                portDefined=true
+            else
+                portDefined=false
+            fi
+        fi
+
+        # build new VeCan ports file - if there are changes tempPorts will exist at the end
+        if ! $ignoreAllPorts ; then
+            if [ -f "$veCanPortsFile" ] && [ $(grep -c "$port" "$veCanPortsFile") != 0 ]; then
+                portActive=true
+                if ! $portDefined ; then
+                    touch "$scriptDir/tempPorts"
+                fi
+            else
+                portActive=false
+                if $portDefined ; then
+                    echo "$port" >> "$scriptDir/tempPorts"
+                fi
+            fi
+        fi
+
+        if $portDefined && [ ! -e $binDir ]; then
+            logMessage "creating $binDir"
+            mkdir $binDir
+        fi
+
+        if $portDefined && [ -f "$thisFileSet/add.sh" ]; then
+            updateActiveFile "$thisFileSet/add.sh" "$binDir/$port"add.sh
+        else
+            restoreActiveFile "$binDir/$port"add.sh
+        fi
+        if $portDefined && [ -f "$thisFileSet/remove.sh" ]; then
+            updateActiveFile "$thisFileSet/remove.sh" "$binDir/$port"remove.sh
+        else
+            restoreActiveFile "$binDir/$port"remove.sh
+        fi
+        if $portDefined && [ -f "$thisFileSet/udevRules" ]; then
+            updateActiveFile "$thisFileSet/udevRules" "$udevRulesDir/$port".rules
+        else
+            restoreActiveFile "$udevRulesDir/$port".rules
+        fi
+
+        # add/remove overlay to/from config.txt - if adding, need to remove a previous one first
+        if [ $(grep -c "#### begin CAN overlay $port" "$configFile") != 0 ]; then
+            overlayExists=true
+            oldOverlayText=$(grep dtoverlay "$configFile")
+        else
+            overlayExists=false
+        fi
+        if $portDefined && [ -f "$thisFileSet/overlay" ]; then
+            installOverlay=true
+            newOverlayText=$(grep dtoverlay "$thisFileSet/overlay")
+        else
+            installOverlay=false
+        fi
+        # correct overlay already installed - don't make changes
+        if $overlayExists && $installOverlay ; then
+            if [ "$oldOverlayText" == "$newOverlayText" ]; then
+              overlayExists=false
+              installOverlay=false
+            fi
+        fi
+        if $overlayExists ; then
+            logMessage "removing CAN overlay for $port from config.txt"
+            sed -i -e "/#### begin CAN overlay $port/,/#### end CAN overlay/d" "$configFile"
+            rebootNeeded=true
+        fi
+        if $installOverlay ; then
+            logMessage "adding CAN overlay for $port to config.txt"
+            cp "$thisFileSet/overlay" "$scriptDir/tmp"
+            sed -i -e s/DEV/$port/ "$scriptDir/tmp"
+            cat "$scriptDir/tmp" >> $configFile
+            rm "$scriptDir/tmp"
+            rebootNeeded=true
+        fi
+        # install/remove services
+        for service in $services; do
+            # add service if it does not already exist
+            if $portDefined ; then
+                tempServiceDir="$scriptDir/tempService.$port"
+                logMessage "re/creating $service.$port"
+                cp -r "$venusDir/$service/service" "$tempServiceDir"
+                sed -i -e s/DEV/$port/ "$tempServiceDir/run"
+                sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
+                rm -rf  "$serviceDir/$service.$port"
+                mv "$tempServiceDir" "$serviceDir/$service.$port"
+            # remove seriice if exists but is not needed
+            else
+                if [ -e "$serviceDir/$service.$port" ]; then
+                    logMessage "removing $service.$port"
+                    svc -d "$serviceDir/$service.$port"
+                    rm -r "$serviceDir/$service.$port"
+                fi
+            fi
+        done
+
+    done
+    if ! $ignoreAllPorts && [ -f "$scriptDir/tempPorts" ] ; then
+        updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
+    fi
+    rm -f "$scriptDir/tempPorts"
+}
+
+
+#### installling
+if [ $scriptAction == 'INSTALL' ] ; then
+
+    logMessage "installing package"
+    updateCanFiles
+fi
+
+# uninstalling - check scriptAction again
+# if an install step failed package needs to be removed
+if [ $scriptAction == 'UNINSTALL' ] ; then
+
+    logMessage "uninstalling package"
+    updateCanFiles
+
+fi
+
+if ! $runningAtBoot ; then
+    echo
+    echo "revised information"
+    displayPorts
+    reportVeCanInfo
+fi
+
+# thats all folks - SCRIPT EXITS INSIDE THE FUNCTION
+endScript

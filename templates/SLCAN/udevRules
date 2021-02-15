@@ -1,0 +1,15 @@
+# CANable USB module udev rules - slcand firmware
+# no serial number reported by CANable in this mode so only one interface supported
+
+# replace DEV with CAN port (e.g., can0)
+# rename file to e.g., can0.rules
+
+# Lawicel CANUSB module
+ACTION=="add", ENV{ID_MODEL}=="CANUSB", ENV{ID_BUS}=="usb", SYMLINK+="ttyDEV",\
+  RUN+="/usr/bin/logger [udev] CANable slcand detected DEV",\
+  RUN+="/usr/local/bin/DEVadd.sh $kernel", ENV{VE_SERVICE}="ignore"\
+  
+ACTION=="remove", ENV{ID_MODEL}=="CANUSB", ENV{ID_BUS}=="usb",\
+  RUN+="/usr/bin/logger [udev] CANable slcand removed DEV",\
+  RUN+="/usr/local/bin/DEVremove.sh"
+

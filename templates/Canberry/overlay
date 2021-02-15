@@ -1,0 +1,7 @@
+#### begin CAN overlay DEV
+# Canberry Hat
+# replace DEV with e.g., can0
+[all]
+dtparam=spi=on
+dtoverlay=mcp2515-DEV,oscillator=16000000,interrupt=22
+#### end CAN overlay
