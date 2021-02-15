@@ -2,6 +2,7 @@
 Manages Victrion VenusOs VeCan (aka CANbus) ports
 
 The setup script's actions are:
+
     Add - add (or modify) a port's configuraiton
         Configuration simply requires selecting one of the supported interfaces:
             CANable (both slcand and candelight firmware)
