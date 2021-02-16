@@ -174,7 +174,7 @@ addFileSet ()
     baseName=$(basename "$deviceDir")
     if [ -e "$scriptDir/templates/$baseName" ]; then
         rm -rf "$scriptDir/$selectedPort"
-        ln -s "../templates/$baseName" "$scriptDir/$selectedPort"
+        ln -s "./templates/$baseName" "$scriptDir/$selectedPort"
         echo
         echo "$selectedPort configuration updated"
         echo
