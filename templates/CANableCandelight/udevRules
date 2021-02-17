@@ -1,14 +1,15 @@
 # CANable USB module udev rules - candlelight firmware
-# for a single interface, serial number is unneeded
-# for more than one, include the serial number line below and set unque names for each interface
-#  ATTRS{serial}=="",\
+# for a single interface, serial number is not needed
+# for more than one, fill in serial number below
 
 # replace DEV with CAN port (e.g., can0)
 # rename file to e.g., can0.rules
 
-
-SUBSYSTEM=="net", ACTION=="add",\
-  ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="606f",\
+ACTION=="add",\
+  ENV{ID_BUS}=="usb",\
+  ENV{ID_MODEL_ID}=="606f",\
+  ENV{ID_VENDOR_ID}=="1d50",\
   NAME="DEV",\
+  ATTRS{serial}=="",\
   RUN+="/usr/bin/logger [udev] CANable Candlelight detected DEV",\
   RUN+="/usr/local/bin/DEVadd.sh"

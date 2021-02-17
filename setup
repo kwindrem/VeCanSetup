@@ -22,7 +22,6 @@ veCanPortsFile=/etc/venus/canbus_ports
 udevRulesDir="/etc/udev/rules.d"
 configFile="/u-boot/config.txt"
 
-
 binDir=/usr/local/bin
 
 # no log file
@@ -44,7 +43,27 @@ fi
 templates="$scriptDir/templates"
 
 
+# this function collects udev info for the port specified in $1
 
+collectUdevInfo ()
+{
+        udevPath=$(udevadm info -e | grep $1 | grep P: | awk '{print $2}')
+        if [ ! -z $udevPath ]; then
+            udevadm info -q all -p "$udevPath" > "$scriptDir/tmp"
+            udevModelId=$(grep ID_MODEL_ID "$scriptDir/tmp" | awk -F= '{print $2}')
+            udevSerial=$(grep ID_SERIAL_SHORT "$scriptDir/tmp" | awk -F= '{print $2}')
+            udevVendor=$(grep ID_VENDOR "$scriptDir/tmp" | grep -v ENC | grep -v FROM | grep -v _ID | awk -F= '{print $2}')
+            udevVendorId=$(grep ID_VENDOR_ID "$scriptDir/tmp" | awk -F= '{print $2}')
+            rm -f "$scriptDir/tmp"
+            udevInfoValid=true
+        else
+            udevModelId=""
+            udevSerial=""
+            udevVendor=""
+            udevVendorId=""
+            udevInfoValid=false
+       fi
+}
 
 
 # this function reports to the console information about VeCan ports
@@ -55,19 +74,11 @@ reportVeCanInfo ()
     echo
     for port in $ports ; do
         echo "information for $port"
-        udevPath=$(udevadm info -e | grep $port | grep P: | awk '{print $2}')
-        if [ -z $udevPath ]; then
-            echo "  no udev information available"
+        collectUdevInfo $port
+        if $udevInfoValid ; then
+            echo "  udev info  vendor=$udevVendor  model Id=$udevModelId  vendor id=$udevVendorId  serial=$udevSerial"
         else
-            udevadm info -q all -p "$udevPath" > "$scriptDir/tmp"
-            bus=$(grep ID_BUS "$scriptDir/tmp" | awk -F= '{print $2}')
-            modelId=$(grep ID_MODEL_ID "$scriptDir/tmp" | awk -F= '{print $2}')
-            serial=$(grep ID_SERIAL_SHORT "$scriptDir/tmp" | awk -F= '{print $2}')
-            vendor=$(grep ID_VENDOR "$scriptDir/tmp" | grep -v ENC | grep -v FROM | grep -v _ID | awk -F= '{print $2}')
-            vendorId=$(grep ID_VENDOR_ID "$scriptDir/tmp" | awk -F= '{print $2}')
-
-            echo "  udev info  bus=$bus  vendor=$vendor  vendor id=$vendorId  model Id=$modelId serial=$serial"
-            rm -f "$scriptDir/tmp"
+            echo "  no udev information available"
         fi
         
         /bin/echo -n "  overlay: "
@@ -96,9 +107,10 @@ displayPorts ()
             portActive=false
             activeText="not active"
         fi
-        if [ -d "$scriptDir/$port" ] && [ -f "$scriptDir/$port/description" ]; then
+        portConfigDir="$scriptDir/$port.config"
+        if [ -d "$portConfigDir" ] && [ -f "$portConfigDir/description" ]; then
             localInfo=true
-            description=$(cat "$scriptDir/$port/description")
+            description=$(cat "$portConfigDir/description")
             localInfoText="$description"
         else
             localInfo=false
@@ -172,16 +184,87 @@ addFileSet ()
 
     #link template directory to one in scriptDir
     baseName=$(basename "$deviceDir")
-    if [ -e "$scriptDir/templates/$baseName" ]; then
-        rm -rf "$scriptDir/$selectedPort"
-        ln -s "./templates/$baseName" "$scriptDir/$selectedPort"
+    portConfigDir="$scriptDir/$selectedPort.config"
+    if [ ! -e "$scriptDir/templates/$baseName" ]; then
+        logMessage "ERROR template $baseName not found - can't create file set for $selectedPort"
+        return
+    else
+        rm -rf "$portConfigDir"
+        cp -r "$scriptDir/templates/$baseName" "$portConfigDir"
+        
+        # personalize overlay for port
+        overlayFile="$portConfigDir/overlay"
+        if [ -f "$overlayFile" ]; then
+            sed -i -e s/DEV/$port/ "$overlayFile"
+        fi
+        
+        udevRulesFile="$portConfigDir/udevRules"
+        if [ -f "$udevRulesFile" ]; then
+            logMessage "personalizing udev rules for $selectedPort"
+            sed -i -e s/DEV/$port/ "$udevRulesFile"
+
+            # serial number in udev rules - optionally needs filling in
+            if [ $(grep 'ATTRS{serial}' "$udevRulesFile") != 0 ]; then
+                collectUdevInfo $selectedPort
+                serialNumber=""
+                # try this port's udev info first
+                if $udevInfoValid ; then
+                    echo "$1 udev info  vendor=$udevVendor  model Id=$udevModelId  vendor id=$udevVendorId  serial=$udevSerial"
+                    if [ ! -z "$udevSerial" ]; then
+                        yesNoPrompt "use this serial number (y/n)?: "
+                        if $yesResponse ; then
+                            serialNumber="$udevSerial"
+                        fi
+                    fi
+                fi
+                # next, look in dmesg
+                if [ -z "$serialNumber" ]; then
+                    modelId=$(sed -n -e '/ACTION/,/ACTION/p' "$udevRulesFile"\
+                                | grep 'ID_MODEL_ID' | awk '-F\"' '{print $2}')
+                    if [ ! -z "$modelId" ]; then
+                        dmesg > "$scriptDir/dmesgTmp"
+                        device=$(grep $modelId "$scriptDir/dmesgTmp" | awk '-F[\]:]' '{print $2}')
+                        if [ ! -z "$device" ]; then
+                            dmesgInfo=$(grep "$device" "$scriptDir/dmesgTmp"  | grep "SerialNumber:")
+                            if [ ! -z "$dmesgInfo" ] ; then
+                                echo found this in dmesg: $dmesgInfo
+                                yesNoPrompt "use that serial number (y/n)?: "
+                                if $yesResponse ; then
+                                    serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
+                                fi
+                            fi
+                        fi
+                    fi
+                fi
+                # prompt for serial number
+                if [ -z $serialNumber ]; then
+                    /bin/echo -n "enter serial number manually (cr for none): "
+                    read serialNumber
+                fi
+                if [ ! -z $serialNumber ]; then
+                    logMessage "adding serial number $serialNumber to $selectedPort udev rules"
+                    sed -i -e s/ATTRS{serial}==\"\"/ATTRS{serial}==\"$serialNumber\"/ "$udevRulesFile"
+                fi
+            fi
+        fi
+
+        # personalize scripts
+        addScript="$portConfigDir/add.sh"
+        removeScript="$portConfigDir/add.sh"
+        if [ -f "$addScript" ] || [ -f "$removeScript" ]; then
+            logMessage "personalizing udev scripts for $selectedPort"
+            if [ -f "$addScript" ]; then
+                sed -i -e s/DEV/$port/ "$addScript"
+            fi
+            if [ -f "$removeScript" ]; then
+                sed -i -e s/DEV/$port/ "$removeScript"
+            fi
+        fi
         echo
         echo "$selectedPort configuration updated"
         echo
         echo "changes PENDING"
         echo "select Install to apply them"
-    else
-        logMessage "ERROR template $baseName not found - can't create file set for $selectedPort"
     fi
 }
 
@@ -196,12 +279,13 @@ removeFileSet ()
     fileSetFound=false
     changes=false
     for port in $ports ; do
-        if [ -e "$scriptDir/$port" ]; then
+        portConfigDir="$scriptDir/$port".config
+        if [ -e "$portConfigDir" ]; then
             fileSetFound=true
-            yesNoPrompt "remove file set for $port (y/n)?:  "
+            yesNoPrompt "remove file set for $port (y/n)?: "
             if $yesResponse ; then
                 logMessage "removing file set for $port"
-                rm -rf "$scriptDir/$port"
+                rm -rf "$portConfigDir"
                 changes=true
             fi
         fi
@@ -298,8 +382,8 @@ updateCanFiles ()
         if $ignoreAllPorts ; then
                 portDefined=false
         else
-            thisFileSet="$scriptDir/$port"
-            if [ -e "$thisFileSet" ]; then
+            portConfigDir="$scriptDir/$port".config
+            if [ -e "$portConfigDir" ]; then
                 portDefined=true
             else
                 portDefined=false
@@ -326,18 +410,18 @@ updateCanFiles ()
             mkdir $binDir
         fi
 
-        if $portDefined && [ -f "$thisFileSet/add.sh" ]; then
-            updateActiveFile "$thisFileSet/add.sh" "$binDir/$port"add.sh
+        if $portDefined && [ -f "$portConfigDir/add.sh" ]; then
+            updateActiveFile "$portConfigDir/add.sh" "$binDir/$port"add.sh
         else
             restoreActiveFile "$binDir/$port"add.sh
         fi
-        if $portDefined && [ -f "$thisFileSet/remove.sh" ]; then
-            updateActiveFile "$thisFileSet/remove.sh" "$binDir/$port"remove.sh
+        if $portDefined && [ -f "$portConfigDir/remove.sh" ]; then
+            updateActiveFile "$portConfigDir/remove.sh" "$binDir/$port"remove.sh
         else
             restoreActiveFile "$binDir/$port"remove.sh
         fi
-        if $portDefined && [ -f "$thisFileSet/udevRules" ]; then
-            updateActiveFile "$thisFileSet/udevRules" "$udevRulesDir/$port".rules
+        if $portDefined && [ -f "$portConfigDir/udevRules" ]; then
+            updateActiveFile "$portConfigDir/udevRules" "$udevRulesDir/$port".rules
         else
             restoreActiveFile "$udevRulesDir/$port".rules
         fi
@@ -349,9 +433,9 @@ updateCanFiles ()
         else
             overlayExists=false
         fi
-        if $portDefined && [ -f "$thisFileSet/overlay" ]; then
+        if $portDefined && [ -f "$portConfigDir/overlay" ]; then
             installOverlay=true
-            newOverlayText=$(grep dtoverlay "$thisFileSet/overlay")
+            newOverlayText=$(grep dtoverlay "$portConfigDir/overlay")
         else
             installOverlay=false
         fi
@@ -369,10 +453,7 @@ updateCanFiles ()
         fi
         if $installOverlay ; then
             logMessage "adding CAN overlay for $port to config.txt"
-            cp "$thisFileSet/overlay" "$scriptDir/tmp"
-            sed -i -e s/DEV/$port/ "$scriptDir/tmp"
-            cat "$scriptDir/tmp" >> $configFile
-            rm "$scriptDir/tmp"
+            cat "$portConfigDir/overlay" >> $configFile
             rebootNeeded=true
         fi
         # install/remove services
@@ -386,7 +467,7 @@ updateCanFiles ()
                 sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
                 rm -rf  "$serviceDir/$service.$port"
                 mv "$tempServiceDir" "$serviceDir/$service.$port"
-            # remove seriice if exists but is not needed
+            # remove service if exists but is not needed
             else
                 if [ -e "$serviceDir/$service.$port" ]; then
                     logMessage "removing $service.$port"
@@ -406,7 +487,6 @@ updateCanFiles ()
 
 #### installling
 if [ $scriptAction == 'INSTALL' ] ; then
-
     logMessage "installing package"
     updateCanFiles
 fi
@@ -425,6 +505,14 @@ if ! $runningAtBoot ; then
     echo "revised information"
     displayPorts
     reportVeCanInfo
+    if $filesUpdated ; then
+        echo
+        echo "new interfaces will not become active until after a reboot"
+        yesNoPrompt "Reboot now (y/n)?: "
+        if $yesResponse ; then
+            rebootNeeded=true
+        fi
+    fi
 fi
 
 # thats all folks - SCRIPT EXITS INSIDE THE FUNCTION
