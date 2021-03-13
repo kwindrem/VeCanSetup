@@ -1,7 +1,0 @@
-#### begin CAN overlay DEV
-# PCAN-USB or Victron CANUSB
-# replace DEV with e.g., can0
-[all]
-dtparam=spi=on
-dtoverlay=mcp2515-DEV,oscillator=8000000,interrupt=25,spimaxfrequency=1000000
-#### end CAN overlay

@@ -12,7 +12,8 @@
 # ports is a space-separated list of possible VE.can ports
 # services in the servcies list are created for each port 
 # NOT SURE if all services are needed for each port. If so, this needs a rewrite!!!
-ports="can0 can1"
+portsList="can0 can1"
+reversePortsList=$(echo $portsList | tr ' ' '\n' | sort -r | tr '\n' ' ')
 services="can-bus-bms vecan-dbus mqtt-n2k"
 
 venusDir=/opt/victronenergy
@@ -42,6 +43,7 @@ fi
 # CAN interfce templates - must be set after sourceing CommonResources
 templates="$scriptDir/templates"
 
+changesPending=false
 
 # this function collects udev info for the port specified in $1
 
@@ -72,7 +74,7 @@ collectUdevInfo ()
 reportVeCanInfo ()
 {
     echo
-    for port in $ports ; do
+    for port in $portsList ; do
         echo "information for $port"
         collectUdevInfo $port
         if $udevInfoValid ; then
@@ -97,61 +99,40 @@ reportVeCanInfo ()
     done
 }
 
+# collects port information and stores it in the $portInfoText varable
+#
+# $1 is the port identifier (e.g., can0)
+
+getPortInfo ()
+{
+    portConfigDir="$scriptDir/$1.config"
+    if [ -d "$portConfigDir" ] && [ -f "$portConfigDir/description" ]; then
+        portInfoText=$(cat "$portConfigDir/description")
+    elif [ -e  "$veCanPortsFile" ] && [ $(grep -c "$1" "$veCanPortsFile") != 0 ]; then
+        portInfoText "could be CONFIGURED ELSEWHERE"
+    else
+        portInfoText="no configuration"
+    fi
+}
+
 displayPorts ()
 {
-    for port in $ports ; do
-        if [ -e  "$veCanPortsFile" ] && [ $(grep -c "$port" "$veCanPortsFile") != 0 ]; then
-            portActive=true
-            activeText="    active"
-        else
-            portActive=false
-            activeText="not active"
-        fi
-        portConfigDir="$scriptDir/$port.config"
-        if [ -d "$portConfigDir" ] && [ -f "$portConfigDir/description" ]; then
-            localInfo=true
-            description=$(cat "$portConfigDir/description")
-            localInfoText="$description"
-        else
-            localInfo=false
-            localInfoText="not defined"
-        fi
-
-        if ! $localInfo && $portActive ; then
-            stockText=" could be STOCK INTERFACE"
-        else
-            stockText=""
-        fi
-        echo "$port $activeText $localInfoText $stockText"
+    for port in $portsList ; do
+        getPortInfo $port
+        echo "$port $portInfoText"
     done
 }
 
-# prompts the user for the necssary information to create or modify an existing file set
-# this creates persistent storage that is for a manual install or automatic reinstall
 
-addFileSet ()
+# updates the local (persistent) copy of the CANbus port
+# This information is then used during an install (manual) or reinstall (boot-time automatic)
+
+# $1 is the port (e.g., "can0) to be updated/created
+
+updateConfiguration ()
 {
-    displayPorts
-    echo
-    selectedPort=""
-    while true; do
-        /bin/echo -n "Choose an interface number from the list above (eg, 0 for can0) (cr to exit): "
-        read response
-        for port in $ports ; do
-            if [ "$port" == "can$response" ]; then
-                selectedPort=$port
-                break
-            fi
-        done
-        if [ -z $response ]; then
-            return
-        elif [ -z $selectedPort ]; then
-            echo "response ($response) not recognized"
-        else
-            break
-        fi
-    done
-
+    port=$1
+    # display device type list
     deviceTypes=($(ls -d "$templates"/*))
     index=0
     echo
@@ -166,136 +147,179 @@ addFileSet ()
          ((index++))
     done
 
-    response=''
-    choice=0
-    while true; do
-        /bin/echo -n "Choose a device type or $selectedPort from the list above (by number): "
-        read response
-        case $response in
-            [0-9]*)
-                choice=$response
-                break;; 
-            *)
-        esac
-    done
-    ((index = choice - 1 ))
+    configUpdated=false
+    echo
+    /bin/echo -n "Choose a device type for $port from the list above (by number) (cr for no change): "
+    read response
+    case $response in
+        [0-9]*)
+                configUpdated=true
+            ;;
+        *)
+    esac
+
+    if ! $configUpdated ; then
+        echo
+        echo "configuration was NOT updated/added"
+        return
+    fi
+
+    ((index = response - 1 ))
     deviceDir=${deviceTypes[$index]}
     description=$(cat "$deviceDir/description")
 
-    #link template directory to one in scriptDir
+    #copy template directory to config for this port
     baseName=$(basename "$deviceDir")
-    portConfigDir="$scriptDir/$selectedPort.config"
     if [ ! -e "$scriptDir/templates/$baseName" ]; then
-        logMessage "ERROR template $baseName not found - can't create file set for $selectedPort"
-        return
-    else
-        rm -rf "$portConfigDir"
-        cp -r "$scriptDir/templates/$baseName" "$portConfigDir"
-        
-        # personalize overlay for port
-        overlayFile="$portConfigDir/overlay"
-        if [ -f "$overlayFile" ]; then
-            sed -i -e s/DEV/$port/ "$overlayFile"
-        fi
-        
-        udevRulesFile="$portConfigDir/udevRules"
-        if [ -f "$udevRulesFile" ]; then
-            logMessage "personalizing udev rules for $selectedPort"
-            sed -i -e s/DEV/$port/ "$udevRulesFile"
+        logMessage "ERROR template $baseName not found - can't create file set for $port"
+        configUpdated=false
+       return
+    fi
 
-            # serial number in udev rules - optionally needs filling in
-            if [ $(grep 'ATTRS{serial}' "$udevRulesFile") != 0 ]; then
-                collectUdevInfo $selectedPort
-                serialNumber=""
-                # try this port's udev info first
-                if $udevInfoValid ; then
-                    echo "$1 udev info  vendor=$udevVendor  model Id=$udevModelId  vendor id=$udevVendorId  serial=$udevSerial"
-                    if [ ! -z "$udevSerial" ]; then
-                        yesNoPrompt "use this serial number (y/n)?: "
-                        if $yesResponse ; then
-                            serialNumber="$udevSerial"
-                        fi
+    # here update/create configuration
+    portConfigDir="$scriptDir/$port.config"
+
+    rm -rf "$portConfigDir"
+    cp -r "$scriptDir/templates/$baseName" "$portConfigDir"
+    
+    # personalize overlay for port
+    overlayFile="$portConfigDir/overlay"
+    if [ -f "$overlayFile" ]; then
+        sed -i -e s/DEV/$port/ "$overlayFile"
+    fi
+
+    # personalize scripts
+    addScript="$portConfigDir/add.sh"
+    removeScript="$portConfigDir/add.sh"
+    if [ -f "$addScript" ] || [ -f "$removeScript" ]; then
+        logMessage "personalizing udev scripts for $port"
+        if [ -f "$addScript" ]; then
+            sed -i -e s/DEV/$port/ "$addScript"
+        fi
+        if [ -f "$removeScript" ]; then
+            sed -i -e s/DEV/$port/ "$removeScript"
+        fi
+    fi
+    
+    udevRulesFile="$portConfigDir/udevRules"
+    if [ -f "$udevRulesFile" ]; then
+        logMessage "personalizing udev rules for $port"
+        sed -i -e s/DEV/$port/ "$udevRulesFile"
+
+        # serial number in udev rules - optionally needs filling in
+        if [ $(grep 'ATTRS{serial}' "$udevRulesFile") != 0 ]; then
+            collectUdevInfo $port
+            serialNumber=""
+            # try this port's udev info first
+            if $udevInfoValid ; then
+                echo "$1 udev info  vendor=$udevVendor  model Id=$udevModelId  vendor id=$udevVendorId  serial=$udevSerial"
+                if [ ! -z "$udevSerial" ]; then
+                    yesNoPrompt "use this serial number (y/n)?: "
+                    if $yesResponse ; then
+                        serialNumber="$udevSerial"
                     fi
                 fi
-                # next, look in dmesg
-                if [ -z "$serialNumber" ]; then
-                    modelId=$(sed -n -e '/ACTION/,/ACTION/p' "$udevRulesFile"\
-                                | grep 'ID_MODEL_ID' | awk '-F\"' '{print $2}')
-                    if [ ! -z "$modelId" ]; then
-                        dmesg > "$scriptDir/dmesgTmp"
-                        device=$(grep $modelId "$scriptDir/dmesgTmp" | awk '-F[\]:]' '{print $2}')
-                        if [ ! -z "$device" ]; then
-                            dmesgInfo=$(grep "$device" "$scriptDir/dmesgTmp"  | grep "SerialNumber:")
-                            if [ ! -z "$dmesgInfo" ] ; then
-                                echo found this in dmesg: $dmesgInfo
-                                yesNoPrompt "use that serial number (y/n)?: "
-                                if $yesResponse ; then
-                                    serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
-                                fi
+            fi
+            # next, look in dmesg
+            if [ -z "$serialNumber" ]; then
+                modelId=$(sed -n -e '/ACTION/,/ACTION/p' "$udevRulesFile"\
+                            | grep 'ID_MODEL_ID' | awk '-F\"' '{print $2}')
+                if [ ! -z "$modelId" ]; then
+                    dmesg > "$scriptDir/dmesgTmp"
+                    device=$(grep $modelId "$scriptDir/dmesgTmp" | awk '-F[\]:]' '{print $2}')
+                    if [ ! -z "$device" ]; then
+                        dmesgInfo=$(grep "$device" "$scriptDir/dmesgTmp"  | grep "SerialNumber:")
+                        if [ ! -z "$dmesgInfo" ] ; then
+                            echo found this in dmesg: $dmesgInfo
+                            yesNoPrompt "use that serial number (y/n)?: "
+                            if $yesResponse ; then
+                                serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
                             fi
                         fi
                     fi
+                    rm -f "$scriptDir/dmesgTmp"
                 fi
-                # prompt for serial number
-                if [ -z $serialNumber ]; then
-                    /bin/echo -n "enter serial number manually (cr for none): "
-                    read serialNumber
-                fi
-                if [ ! -z $serialNumber ]; then
-                    logMessage "adding serial number $serialNumber to $selectedPort udev rules"
-                    sed -i -e s/ATTRS{serial}==\"\"/ATTRS{serial}==\"$serialNumber\"/ "$udevRulesFile"
-                fi
+            fi
+            # prompt for serial number
+            if [ -z $serialNumber ]; then
+                /bin/echo -n "enter serial number manually (cr for none): "
+                read serialNumber
+            fi
+            if [ ! -z $serialNumber ]; then
+                logMessage "adding serial number $serialNumber to $port udev rules"
+                sed -i -e s/ATTRS{serial}==\"\"/ATTRS{serial}==\"$serialNumber\"/ "$udevRulesFile"
             fi
         fi
-
-        # personalize scripts
-        addScript="$portConfigDir/add.sh"
-        removeScript="$portConfigDir/add.sh"
-        if [ -f "$addScript" ] || [ -f "$removeScript" ]; then
-            logMessage "personalizing udev scripts for $selectedPort"
-            if [ -f "$addScript" ]; then
-                sed -i -e s/DEV/$port/ "$addScript"
-            fi
-            if [ -f "$removeScript" ]; then
-                sed -i -e s/DEV/$port/ "$removeScript"
-            fi
-        fi
-        echo
-        echo "$selectedPort configuration updated"
-        echo
-        echo "changes PENDING"
-        echo "select Install to apply them"
     fi
+    echo "$port configuration updated"
+    changesPending=true
 }
 
 
-# removes a file set for the selected port(s)
-# this does NOT remove them from the Venus active directories
-#
-# $1 is the port
+# looks for configurations to be added, modified or removed
+# multile configurations may be updated without returning to the main menu
+# configurations must be added in assending order, that is you can't create can1 before can0
+# and removed in reverse order so that can0 is the first one added, the last one removed
+# and no gaps (e.g., can0, can3 not allowed)
+# modifications to the local configuration does not install/activate them!
 
-removeFileSet ()
+addConfiguration ()
 {
-    fileSetFound=false
-    changes=false
-    for port in $ports ; do
-        portConfigDir="$scriptDir/$port".config
-        if [ -e "$portConfigDir" ]; then
-            fileSetFound=true
-            yesNoPrompt "remove file set for $port (y/n)?: "
-            if $yesResponse ; then
-                logMessage "removing file set for $port"
-                rm -rf "$portConfigDir"
-                changes=true
+    # find first port without a configuration
+    selectedPort=""
+    for port in $portsList ; do
+        portConfigDir="$scriptDir/$port.config"
+        if [ ! -e $portConfigDir ]; then
+            updateConfiguration $port
+            if ! $configUpdated ; then
+                return
             fi
         fi
     done
-    if ! $fileSetFound ; then
-        echo "no file sets found"
-    elif $changes ; then
-        echo
-        echo "changes PENDING"
-        echo "select Install to apply them"
+    echo "no more configurations can be added"
+}
+
+modifyConfiguration ()
+{
+    selectedPort=""
+    for port in $portsList ; do
+        portConfigDir="$scriptDir/$port.config"
+        if [ -e $portConfigDir ]; then
+            echo
+            getPortInfo $port
+            yesNoPrompt "modify $port $portInfoText (y/n)?: "
+            if $yesResponse ; then
+                updateConfiguration $port
+            fi
+        fi
+    done
+    echo "no more configurations to be modified"
+}
+
+
+removeConfiguration ()
+{
+    for port in $reversePortsList ; do
+        configFound=false
+        portConfigDir="$scriptDir/$port".config
+        if [ -e "$portConfigDir" ]; then
+            configFound=true
+
+            getPortInfo $port
+            echo
+            yesNoPrompt "remove $port $portInfoText (y/n)?: "
+            if $yesResponse ; then
+                logMessage "removing confituration for $port"
+                rm -rf "$portConfigDir"
+                changesPending=true
+            # didn't remove this interface so can't do any more
+            else
+                break;
+            fi
+        fi
+    done
+    if ! $configFound ; then
+        echo "all configurations have been removed"
     fi
 }
 
@@ -309,34 +333,42 @@ if [ $scriptAction == 'NONE' ] ; then
     response=''
     displayMessage=true
     while true; do
+        echo
+        echo "VeCan configurations"
+        displayPorts
+        if $changesPending ; then
+            echo
+            echo "changes are NOT active yet"
+            echo "select INSTALL when all changes have been made and verified"
+        fi
         if $displayMessage ; then
             echo
-            echo "VeCan interfaces"
-            displayPorts
-            echo
             echo "Available actions:"
-            echo "  Display interface information (d)"
-            echo "  Add / Modify interface configuration - does NOT activate it (a)"
-            echo "  Remove a local interface configurtaiton - does NOT deactivate it (r)"
-            echo "  Install and activate interfaces - updates active files from local copies (i)"
-            echo "  Uninstall (u) and restore all files to stock"
-            echo "  Quit (q) without further action"
-            echo "  Display setup log (l) outputs the last 100 lines of the log"
+            echo "  Add interface configurations (a)"
+            echo "  Modify interface configurations (m)"
+            echo "  Remove interface configurations (r)"
             echo
+            echo "  Install and activate interfaces (i)"
+            echo "  Uninstall (u) and restore all files to stock"
+            echo
+            echo "  Display interface information (d)"
+            echo "  Display setup log (l) outputs the last 100 lines of the log"
+            echo "  Quit (q) without further action"
         fi
 
+        echo
         /bin/echo -n "Choose an action from the list above: "
         read response
-        displayMessage=true
+        displayMessage=false
         case $response in
-            [dD]*)
-                reportVeCanInfo
-                ;;
             [aA]*)
-                addFileSet
+                addConfiguration
+                ;;
+            [mM]*)
+                modifyConfiguration
                 ;;
             [rR]*)
-                removeFileSet
+                removeConfiguration
                 ;;
             [iI]*)
                 scriptAction='INSTALL'
@@ -346,14 +378,17 @@ if [ $scriptAction == 'NONE' ] ; then
                 scriptAction='UNINSTALL'
                 break
                 ;;
-            [qQ]*)
-                exit
+            [dD]*)
+                reportVeCanInfo
                 ;;
             [lL]*)
                 displayLog $setupLogFile
                 ;;
+            [qQ]*)
+                break
+                ;;
             *)
-                displayMessage=false
+                displayMessage=true
                 ;;
         esac
     done
@@ -377,7 +412,7 @@ updateCanFiles ()
     fi
 
     rm -f "$scriptDir/tempPorts"
-    for port in $ports; do
+    for port in $portsList; do
         # treat uninstall as if there is nothing specified for the port
         if $ignoreAllPorts ; then
                 portDefined=false
@@ -452,7 +487,7 @@ updateCanFiles ()
             rebootNeeded=true
         fi
         if $installOverlay ; then
-            logMessage "adding CAN overlay for $port to config.txt"
+            logMessage "adding overlay for $port to config.txt"
             cat "$portConfigDir/overlay" >> $configFile
             rebootNeeded=true
         fi
@@ -497,7 +532,6 @@ if [ $scriptAction == 'UNINSTALL' ] ; then
 
     logMessage "uninstalling package"
     updateCanFiles
-
 fi
 
 if ! $runningAtBoot ; then
@@ -505,13 +539,15 @@ if ! $runningAtBoot ; then
     echo "revised information"
     displayPorts
     reportVeCanInfo
-    if $filesUpdated ; then
+    if $changesPending ; then
+        echo
+        echo "updated configurations have NOT been installed and activated"
+        echo "rerun the script and select INSTALL"
+    fi
+    if $filesUpdated || $rebootNeeded ; then
         echo
         echo "new interfaces will not become active until after a reboot"
-        yesNoPrompt "Reboot now (y/n)?: "
-        if $yesResponse ; then
-            rebootNeeded=true
-        fi
+        rebootNeeded=true
     fi
 fi
 
