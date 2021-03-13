@@ -248,6 +248,9 @@ updateConfiguration ()
             if [ ! -z $serialNumber ]; then
                 logMessage "adding serial number $serialNumber to $port udev rules"
                 sed -i -e s/ATTRS{serial}==\"\"/ATTRS{serial}==\"$serialNumber\"/ "$udevRulesFile"
+            else
+                logMessage "removing serial number from $port udev rules"
+                sed -i -e '/ATTRS{serial}/ d' "$udevRulesFile"
             fi
         fi
     fi
