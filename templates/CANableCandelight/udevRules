@@ -9,7 +9,6 @@ ACTION=="add",\
   ENV{ID_BUS}=="usb",\
   ENV{ID_MODEL_ID}=="606f",\
   ENV{ID_VENDOR_ID}=="1d50",\
-  NAME="DEV",\
   ATTRS{serial}=="",\
   RUN+="/usr/bin/logger [udev] CANable Candlelight detected DEV",\
   RUN+="/usr/local/bin/DEVadd.sh"
