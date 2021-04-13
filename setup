@@ -153,7 +153,7 @@ updateConfiguration ()
     read response
     case $response in
         [0-9]*)
-                configUpdated=true
+            configUpdated=true
             ;;
         *)
     esac
@@ -207,7 +207,7 @@ updateConfiguration ()
         sed -i -e s/DEV/$port/ "$udevRulesFile"
 
         # serial number in udev rules - optionally needs filling in
-        if [ $(grep 'ATTRS{serial}' "$udevRulesFile") != 0 ]; then
+        if [ $(grep -c 'ATTRS{serial}' "$udevRulesFile") != 0 ]; then
             collectUdevInfo $port
             serialNumber=""
             # try this port's udev info first
@@ -520,6 +520,8 @@ updateCanFiles ()
         updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
     fi
     rm -f "$scriptDir/tempPorts"
+
+    changesPending=false
 }
 
 
