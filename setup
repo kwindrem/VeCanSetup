@@ -33,15 +33,11 @@ packageLogFile=""
 
 source "/data/SetupHelper/CommonResources"
 
-if [ $scriptAction == 'EXIT' ] ; then
-    exit
-fi
-
 #### end of lines to include SetupHelper
 
 
-# CAN interfce templates - must be set after sourceing CommonResources
-templates="$scriptDir/templates"
+# CAN interfce templates - must be set after sourcing CommonResources
+templatesDir="$scriptDir/templates"
 
 changesPending=false
 
@@ -105,7 +101,7 @@ reportVeCanInfo ()
 
 getPortInfo ()
 {
-    portConfigDir="$scriptDir/$1.config"
+    portConfigDir="$setupOptionsDir/$1.config"
     if [ -d "$portConfigDir" ] && [ -f "$portConfigDir/description" ]; then
         portInfoText=$(cat "$portConfigDir/description")
     elif [ -e  "$veCanPortsFile" ] && [ $(grep -c "$1" "$veCanPortsFile") != 0 ]; then
@@ -133,7 +129,7 @@ updateConfiguration ()
 {
     port=$1
     # display device type list
-    deviceTypes=($(ls -d "$templates"/*))
+    deviceTypes=($(ls -d "$templatesDir"/*))
     index=0
     echo
     while true; do
@@ -170,17 +166,17 @@ updateConfiguration ()
 
     #copy template directory to config for this port
     baseName=$(basename "$deviceDir")
-    if [ ! -e "$scriptDir/templates/$baseName" ]; then
+    if [ ! -e "$templatesDir/$baseName" ]; then
         logMessage "ERROR template $baseName not found - can't create file set for $port"
         configUpdated=false
        return
     fi
 
     # here update/create configuration
-    portConfigDir="$scriptDir/$port.config"
+    portConfigDir="$setupOptionsDir/$port.config"
 
     rm -rf "$portConfigDir"
-    cp -r "$scriptDir/templates/$baseName" "$portConfigDir"
+    cp -r "$templatesDir/$baseName" "$portConfigDir"
     
     # personalize overlay for port
     overlayFile="$portConfigDir/overlay"
@@ -271,7 +267,7 @@ addConfiguration ()
     # find first port without a configuration
     selectedPort=""
     for port in $portsList ; do
-        portConfigDir="$scriptDir/$port.config"
+        portConfigDir="$setupOptionsDir/$port.config"
         if [ ! -e $portConfigDir ]; then
             updateConfiguration $port
             if ! $configUpdated ; then
@@ -286,7 +282,7 @@ modifyConfiguration ()
 {
     selectedPort=""
     for port in $portsList ; do
-        portConfigDir="$scriptDir/$port.config"
+        portConfigDir="$setupOptionsDir/$port.config"
         if [ -e $portConfigDir ]; then
             echo
             getPortInfo $port
@@ -304,7 +300,7 @@ removeConfiguration ()
 {
     for port in $reversePortsList ; do
         configFound=false
-        portConfigDir="$scriptDir/$port".config
+        portConfigDir="$setupOptionsDir/$port".config
         if [ -e "$portConfigDir" ]; then
             configFound=true
 
@@ -329,9 +325,14 @@ removeConfiguration ()
 
 #### running manually - prompt for input
 if [ $scriptAction == 'NONE' ] ; then
+
+    if [ -f "$setupOptionsDir/optionsSet" ]; then
+        enableReinstall=true
+    else
+        enableReinstall=false
+    fi
+
     # display innitial message
-    
-    interfaces=$(ls "$scriptDir")
     
     response=''
     displayMessage=true
@@ -349,9 +350,12 @@ if [ $scriptAction == 'NONE' ] ; then
             echo "Available actions:"
             echo "  Add interface configurations (a)"
             echo "  Modify interface configurations (m)"
-            echo "  Remove interface configurations (r)"
+            echo "  Remove interface configurations (x)"
             echo
             echo "  Install and activate interfaces (i)"
+            if $enableReinstall ; then
+                echo "  Reinstall (r) based on options provided at last install"
+            fi
             echo "  Uninstall (u) and restore all files to stock"
             echo
             echo "  Display interface information (d)"
@@ -370,12 +374,18 @@ if [ $scriptAction == 'NONE' ] ; then
             [mM]*)
                 modifyConfiguration
                 ;;
-            [rR]*)
+            [xX]*)
                 removeConfiguration
                 ;;
             [iI]*)
                 scriptAction='INSTALL'
                 break
+                ;;
+            [rR]*)
+                if $enableReinstall ; then
+                    scriptAction='INSTALL'
+                    break
+                fi
                 ;;
             [uU]*)
                 scriptAction='UNINSTALL'
@@ -420,7 +430,7 @@ updateCanFiles ()
         if $ignoreAllPorts ; then
                 portDefined=false
         else
-            portConfigDir="$scriptDir/$port".config
+            portConfigDir="$setupOptionsDir/$port".config
             if [ -e "$portConfigDir" ]; then
                 portDefined=true
             else
