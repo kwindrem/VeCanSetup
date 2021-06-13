@@ -508,13 +508,16 @@ updateCanFiles ()
         for service in $services; do
             # add service if it does not already exist
             if $portDefined ; then
-                tempServiceDir="$scriptDir/tempService.$port"
-                logMessage "re/creating $service.$port"
-                cp -r "$venusDir/$service/service" "$tempServiceDir"
-                sed -i -e s/DEV/$port/ "$tempServiceDir/run"
-                sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
-                rm -rf  "$serviceDir/$service.$port"
-                mv "$tempServiceDir" "$serviceDir/$service.$port"
+                if [ ! -d "$serviceDir/$service.$port" ] ; then
+                    tempServiceDir="$scriptDir/tempService.$port"
+                    logMessage "creating $service.$port"
+                    cp -r "$venusDir/$service/service" "$tempServiceDir"
+                    sed -i -e s/DEV/$port/ "$tempServiceDir/run"
+                    sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
+                    rm -rf  "$serviceDir/$service.$port"
+                    mv "$tempServiceDir" "$serviceDir/$service.$port"
+                    filesUpdated=true
+                fi
             # remove service if exists but is not needed
             else
                 if [ -e "$serviceDir/$service.$port" ]; then
