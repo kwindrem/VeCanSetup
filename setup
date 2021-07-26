@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# setup for CANbus with CANable interface
-# both slcand and candlelight firmware supported here
+# setup for CANbus with CANable and other 3rd party interfaces
 
 # installs shell scripts and udev rules
 
@@ -10,10 +9,13 @@
 
 # installs CAN dBus services
 # ports is a space-separated list of possible VE.can ports
-# services in the servcies list are created for each port 
-# NOT SURE if all services are needed for each port. If so, this needs a rewrite!!!
-portsList="can0 can1"
-reversePortsList=$(echo $portsList | tr ' ' '\n' | sort -r | tr '\n' ' ')
+# all services in the servcies list are created for each port
+
+# This script will NOT change factory CAN ports !!!!
+# but it would be possible to add a port to say a CCGX
+
+
+displayPortsList="can0 can1"
 services="can-bus-bms vecan-dbus mqtt-n2k"
 
 venusDir=/opt/victronenergy
@@ -21,7 +23,6 @@ serviceDir=/service
 veCanPortsFile=/etc/venus/canbus_ports
 
 udevRulesDir="/etc/udev/rules.d"
-configFile="/u-boot/config.txt"
 
 binDir=/usr/local/bin
 
@@ -34,6 +35,45 @@ packageLogFile=""
 source "/data/SetupHelper/CommonResources"
 
 #### end of lines to include SetupHelper
+
+overlaysOK=false
+stockPortsList=""
+
+# check machine type so changing built-in CAN ports can be avoided
+if [ -f /etc/venus/machine ]; then
+    machine=$(cat /etc/venus/machine)
+    case $machine in
+        raspberrypi*)
+            configFile="/u-boot/config.txt"
+            portsList="can0 can1"
+            gxDevice="Raspberry PI - no built-in CAN ports"
+            ;;
+        einstein)
+            configFile=""
+            portsList=""
+            gxDevice="Cerbo GX - 2 built-in CAN ports"
+            ;;
+        beaglebone)
+            configFile=""
+            portsList=""
+            gxDevice="Venus GX - 2 CAN ports"
+            ;;
+        ccgx)
+            configFile=""
+            portsList="can1"
+            ;;
+        *)
+            gxDevice="unsupported Venus device type $machine - changes not allowed"
+            configFile=""
+            portsList=""
+        ;;
+    esac
+else
+    logMessage "can't determine Venus device type - exiting"
+    exit
+fi
+
+reversePortsList=$(echo $portsList | tr ' ' '\n' | sort -r | tr '\n' ' ')
 
 
 # CAN interfce templates - must be set after sourcing CommonResources
@@ -70,7 +110,7 @@ collectUdevInfo ()
 reportVeCanInfo ()
 {
     echo
-    for port in $portsList ; do
+    for port in $displayPortsList ; do
         echo "information for $port"
         collectUdevInfo $port
         if $udevInfoValid ; then
@@ -80,8 +120,12 @@ reportVeCanInfo ()
         fi
         
         /bin/echo -n "  overlay: "
-        grep "$port" "$configFile" | grep -v "#"
-        if [ $? == 1 ]; then
+        if [ ! -z "$configFile" ]; then
+            grep "$port" "$configFile" | grep -v "#"
+            if [ $? == 1 ]; then
+                echo "none"
+            fi
+        else
             echo "none"
         fi
 
@@ -105,7 +149,7 @@ getPortInfo ()
     if [ -d "$portConfigDir" ] && [ -f "$portConfigDir/description" ]; then
         portInfoText=$(cat "$portConfigDir/description")
     elif [ -e  "$veCanPortsFile" ] && [ $(grep -c "$1" "$veCanPortsFile") != 0 ]; then
-        portInfoText "could be CONFIGURED ELSEWHERE"
+        portInfoText="could be CONFIGURED ELSEWHERE"
     else
         portInfoText="no configuration"
     fi
@@ -113,7 +157,7 @@ getPortInfo ()
 
 displayPorts ()
 {
-    for port in $portsList ; do
+    for port in $displayPortsList ; do
         getPortInfo $port
         echo "$port $portInfoText"
     done
@@ -338,6 +382,7 @@ if [ $scriptAction == 'NONE' ] ; then
     displayMessage=true
     while true; do
         echo
+        echo "$gxDevice"
         echo "VeCan configurations"
         displayPorts
         if $changesPending ; then
@@ -424,7 +469,13 @@ updateCanFiles ()
         ignoreAllPorts=false
     fi
 
-    rm -f "$scriptDir/tempPorts"
+    if [ -f "$veCanPortsFile" ]; then
+        cp "$veCanPortsFile" "$scriptDir/tempPorts"
+    else
+        rm -f "$scriptDir/tempPorts"
+    fi
+    tempPortChanges=false
+    
     for port in $portsList; do
         # treat uninstall as if there is nothing specified for the port
         if $ignoreAllPorts ; then
@@ -438,18 +489,21 @@ updateCanFiles ()
             fi
         fi
 
-        # build new VeCan ports file - if there are changes tempPorts will exist at the end
+        # update temp copy of VeCan ports file
         if ! $ignoreAllPorts ; then
             if [ -f "$veCanPortsFile" ] && [ $(grep -c "$port" "$veCanPortsFile") != 0 ]; then
                 portActive=true
                 if ! $portDefined ; then
                     touch "$scriptDir/tempPorts"
+                    tempPortChanges=true
                 fi
             else
                 portActive=false
                 if $portDefined ; then
                     echo "$port" >> "$scriptDir/tempPorts"
-                fi
+                    tempPortChanges=true
+                    portActive=true
+               fi
             fi
         fi
 
@@ -475,34 +529,37 @@ updateCanFiles ()
         fi
 
         # add/remove overlay to/from config.txt - if adding, need to remove a previous one first
-        if [ $(grep -c "#### begin CAN overlay $port" "$configFile") != 0 ]; then
-            overlayExists=true
-            oldOverlayText=$(grep dtoverlay "$configFile")
-        else
+        if [ ! -z "$configFile" ]; then
             overlayExists=false
-        fi
-        if $portDefined && [ -f "$portConfigDir/overlay" ]; then
-            installOverlay=true
-            newOverlayText=$(grep dtoverlay "$portConfigDir/overlay")
-        else
-            installOverlay=false
-        fi
-        # correct overlay already installed - don't make changes
-        if $overlayExists && $installOverlay ; then
-            if [ "$oldOverlayText" == "$newOverlayText" ]; then
-              overlayExists=false
-              installOverlay=false
+            if [ -f "$configFile" ]; then
+                if [ $(grep -c "#### begin CAN overlay $port" "$configFile") != 0 ]; then
+                    overlayExists=true
+                    oldOverlayText=$(grep dtoverlay "$configFile")
+                fi
             fi
-        fi
-        if $overlayExists ; then
-            logMessage "removing CAN overlay for $port from config.txt"
-            sed -i -e "/#### begin CAN overlay $port/,/#### end CAN overlay/d" "$configFile"
-            rebootNeeded=true
-        fi
-        if $installOverlay ; then
-            logMessage "adding overlay for $port to config.txt"
-            cat "$portConfigDir/overlay" >> $configFile
-            rebootNeeded=true
+            if $portDefined && [ -f "$portConfigDir/overlay" ]; then
+                installOverlay=true
+                newOverlayText=$(grep dtoverlay "$portConfigDir/overlay")
+            else
+                installOverlay=false
+            fi
+            # correct overlay already installed - don't make changes
+            if $overlayExists && $installOverlay ; then
+                if [ "$oldOverlayText" == "$newOverlayText" ]; then
+                  overlayExists=false
+                  installOverlay=false
+                fi
+            fi
+            if $overlayExists ; then
+                logMessage "removing CAN overlay for $port from config.txt"
+                sed -i -e "/#### begin CAN overlay $port/,/#### end CAN overlay/d" "$configFile"
+                rebootNeeded=true
+            fi
+            if $installOverlay ; then
+                logMessage "adding overlay for $port to config.txt"
+                cat "$portConfigDir/overlay" >> $configFile
+                rebootNeeded=true
+            fi
         fi
         # install/remove services
         for service in $services; do
@@ -519,7 +576,7 @@ updateCanFiles ()
                     filesUpdated=true
                 fi
             # remove service if exists but is not needed
-            else
+            elif ! $portActive ; then
                 if [ -e "$serviceDir/$service.$port" ]; then
                     logMessage "removing $service.$port"
                     svc -d "$serviceDir/$service.$port"
@@ -529,7 +586,7 @@ updateCanFiles ()
         done
 
     done
-    if ! $ignoreAllPorts && [ -f "$scriptDir/tempPorts" ] ; then
+    if $tempPortChanges ; then
         updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
     fi
     rm -f "$scriptDir/tempPorts"

@@ -1,5 +1,12 @@
 This package manages Victrion VenusOs VeCan (aka CANbus) ports
 
+NOTE: Modifying built-in CAN ports can render them unoperable requireing Venus OS to be reinstalled.
+
+For this reason, built-in ports can NOT be changed by this script.
+For example, a CCGX has one built-in CAN port, so only CAN1 can be affected by this script
+but a Raspberry PI has no built-in ports so both CAN0 and CAN1 can be edited.
+Cerbo GX has 2 built-in ports, so attempting add/modify/delete options will result in no additional prompting.
+
 The setup script's actions are:
 
     Add - add (or modify) a port's configuraiton
@@ -15,6 +22,7 @@ The setup script's actions are:
     Install the configured ports into the Venus file system
     Uninstall/restore all Venus files installed by this package
     leaving the system in a stock configuraiton
+
 
 The script also hooks into SetupHelper's boot-time reinstall mechanism which reinstalls Venus file system modifications after they are overwritten by a Venus OS update
 
