@@ -19,7 +19,6 @@ displayPortsList="can0 can1"
 services="can-bus-bms vecan-dbus mqtt-n2k"
 
 venusDir=/opt/victronenergy
-serviceDir=/service
 veCanPortsFile=/etc/venus/canbus_ports
 
 udevRulesDir="/etc/udev/rules.d"
@@ -579,7 +578,7 @@ updateCanFiles ()
             elif ! $portActive ; then
                 if [ -e "$serviceDir/$service.$port" ]; then
                     logMessage "removing $service.$port"
-                    svc -d "$serviceDir/$service.$port"
+                    svc -d "/service/$service.$port"
                     rm -r "$serviceDir/$service.$port"
                 fi
             fi
