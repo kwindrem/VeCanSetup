@@ -560,21 +560,28 @@ updateCanFiles ()
                 rebootNeeded=true
             fi
         fi
-        # install/remove services
+        # add service if port is active and if service does not already exist
         for service in $services; do
-           # add service if it does not already exist
             if $portDefined ; then
                 srcDir="$venusDir/$service/service"
                 destDir="$serviceDir/$service.$port"
                 tempServiceDir="$scriptDir/tempService.$port"
-                if [ ! -d "$destDir" ] && [ -d "$srcDir" ] ; then
-                    logMessage "creating $service.$port"
-                    cp -r "srcDir" "$tempServiceDir"
-                    sed -i -e s/DEV/$port/ "$tempServiceDir/run"
-                    sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
-                    rm -rf  "$serviceDir/$service.$port"
-                    mv "$tempServiceDir" "$destDir"
-                    filesUpdated=true
+                missingService="$scriptDir/missingServices/$service.$port"
+                if [ ! -d "$destDir" ]; then
+                    # from /opt/victronenergy
+                    if [ -d "$srcDir" ] ; then
+                        logMessage "creating $service.$port"
+                        cp -r "$srcDir" "$tempServiceDir"
+                        sed -i -e s/DEV/$port/ "$tempServiceDir/run"
+                        sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
+                        rm -rf  "$serviceDir/$service.$port"
+                        mv "$tempServiceDir" "$destDir"
+                        filesUpdated=true
+                    # from this package
+                    elif [ -d  "$missingService" ]; then
+                        logMessage "creating $service.$port from missingServices"
+                        cp -r "$missingService" "$destDir"
+                    fi
                 fi
             fi
         done
