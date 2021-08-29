@@ -16,7 +16,7 @@
 
 
 displayPortsList="can0 can1"
-services="can-bus-bms vecan-dbus mqtt-n2k"
+services="can-bus-bms vecan-dbus mqtt-n2k dbus-valence dbus-motordrive"
 
 venusDir=/opt/victronenergy
 veCanPortsFile=/etc/venus/canbus_ports
