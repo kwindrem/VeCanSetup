@@ -563,12 +563,17 @@ updateCanFiles ()
         # add service if port is active and if service does not already exist
         for service in $services; do
             if $portDefined ; then
-                srcDir="$venusDir/$service/service"
                 destDir="$serviceDir/$service.$port"
-                tempServiceDir="$scriptDir/tempService.$port"
-                missingService="$scriptDir/missingServices/$service.$port"
                 if [ ! -d "$destDir" ]; then
-                    # from /opt/victronenergy
+                    serviceTemplate="$venusDir/service-templates/$service"
+                    tempServiceDir="$scriptDir/tempService.$port"
+                    # template exists (v2.80 and beyond), take service source from there
+                    if [ -d "$serviceTemplate" ]; then
+                        srcDir="$venusDir/service-templates/$service"
+                    # otherwise assume service template is in the service's main directory
+                    else
+                        srcDir="$venusDir/$service/service"
+                    fi
                     if [ -d "$srcDir" ] ; then
                         logMessage "creating $service.$port"
                         cp -r "$srcDir" "$tempServiceDir"
@@ -577,10 +582,6 @@ updateCanFiles ()
                         rm -rf  "$serviceDir/$service.$port"
                         mv "$tempServiceDir" "$destDir"
                         filesUpdated=true
-                    # from this package
-                    elif [ -d  "$missingService" ]; then
-                        logMessage "creating $service.$port from missingServices"
-                        cp -r "$missingService" "$destDir"
                     fi
                 fi
             fi

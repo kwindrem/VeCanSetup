@@ -1,3 +1,0 @@
-#!/bin/sh
-exec 2>&1
-exec multilog t s25000 n4 /var/log/mqtt-n2k.can1

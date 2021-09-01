@@ -1,4 +1,0 @@
-#!/bin/sh
-echo "*** starting mqtt-n2k ***"
-exec 2>&1
-exec softlimit -d 100000000 -s 1000000 -a 100000000 /opt/victronenergy/mqtt-n2k/mqtt-n2k -H localhost -P 1883 -C mqtt_n2k -c socketcan:can0 --banner --log-before 25 --log-after 25 -vv
