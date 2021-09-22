@@ -459,26 +459,14 @@ fi
 
 updateCanFiles ()
 {
-    # treat uninstall as if there is nothing specified for the port
-    # all files for all ports will be removed/restored
-    if [ $scriptAction == 'UNINSTALL' ]; then
-        restoreActiveFile "$veCanPortsFile"
-        ignoreAllPorts=true
-    else
-        ignoreAllPorts=false
-    fi
-
-    if [ -f "$veCanPortsFile" ]; then
-        cp "$veCanPortsFile" "$scriptDir/tempPorts"
-    else
-        rm -f "$scriptDir/tempPorts"
-    fi
-    tempPortChanges=false
+    # start with empty canbus_ports temp file
+    cat "" > "$scriptDir/tempPorts"
     
     for port in $portsList; do
         # treat uninstall as if there is nothing specified for the port
-        if $ignoreAllPorts ; then
-                portDefined=false
+        # all files for all ports will be removed/restored
+        if [ $scriptAction == 'UNINSTALL' ] ; then
+            portDefined=false
         else
             portConfigDir="$setupOptionsDir/$port".config
             if [ -e "$portConfigDir" ]; then
@@ -489,21 +477,8 @@ updateCanFiles ()
         fi
 
         # update temp copy of VeCan ports file
-        if ! $ignoreAllPorts ; then
-            if [ -f "$veCanPortsFile" ] && [ $(grep -c "$port" "$veCanPortsFile") != 0 ]; then
-                portActive=true
-                if ! $portDefined ; then
-                    touch "$scriptDir/tempPorts"
-                    tempPortChanges=true
-                fi
-            else
-                portActive=false
-                if $portDefined ; then
-                    echo "$port" >> "$scriptDir/tempPorts"
-                    tempPortChanges=true
-                    portActive=true
-               fi
-            fi
+        if $portDefined ; then
+            echo "$port" >> "$scriptDir/tempPorts"
         fi
 
         if $portDefined && [ ! -e $binDir ]; then
@@ -588,7 +563,10 @@ updateCanFiles ()
         done
 
     done
-    if $tempPortChanges ; then
+
+    if [ $scriptAction == 'UNINSTALL' ]; then
+        restoreActiveFile "$veCanPortsFile"
+    else
         updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
     fi
     rm -f "$scriptDir/tempPorts"
