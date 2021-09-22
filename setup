@@ -122,7 +122,13 @@ reportVeCanInfo ()
         if [ ! -z "$configFile" ]; then
             grep "$port" "$configFile" | grep -v "#"
             if [ $? == 1 ]; then
-                echo "none"
+                portConfigDir="$setupOptionsDir/$port.config"
+                if [ -f "$portConfigDir/MANUAL_OVERLAY" ]; then
+                    echo ">>>> NEEDS MANUAL OVERLAY <<<<"
+                else
+                    echo "none"
+                fi
+
             fi
         else
             echo "none"
@@ -293,6 +299,26 @@ updateConfiguration ()
             fi
         fi
     fi
+
+    # prompt for overlay install
+    if [ -f "$portConfigDir/overlay" ]; then
+        echo
+        echo "This device requires an overlay."
+        echo "If the overlay is not installed, the interface will not work"
+        echo
+        yesNoPrompt "Do you want to intall the overlay automatically (y/n)?: "
+        if $yesResponse ; then
+            rm -f "$portConfigDir/MANUAL_OVERLAY"
+        else
+            touch "$portConfigDir/MANUAL_OVERLAY"
+            echo
+            echo "YOU MUST INSTALL THE FOLLOWING LINES IN /u-boot/config.txt MANUALLY"
+            if [ ! -z "$configFile" ]; then
+                grep -v "#" "$portConfigDir/overlay"
+            fi
+        fi
+    fi
+
     echo "$port configuration updated"
     changesPending=true
 }
@@ -460,7 +486,7 @@ fi
 updateCanFiles ()
 {
     # start with empty canbus_ports temp file
-    cat "" > "$scriptDir/tempPorts"
+    echo "" > "$scriptDir/tempPorts"
     
     for port in $portsList; do
         # treat uninstall as if there is nothing specified for the port
@@ -503,28 +529,28 @@ updateCanFiles ()
         fi
 
         # add/remove overlay to/from config.txt - if adding, need to remove a previous one first
-        if [ ! -z "$configFile" ]; then
-            overlayExists=false
-            if [ -f "$configFile" ]; then
-                if [ $(grep -c "#### begin CAN overlay $port" "$configFile") != 0 ]; then
-                    overlayExists=true
-                    oldOverlayText=$(grep dtoverlay "$configFile")
-                fi
+        if [ ! -z "$configFile" ] && [ -f "$configFile" ]; then
+            if [ $(grep -c "#### begin CAN overlay $port" "$configFile") != 0 ]; then
+                removeOverlay=true
+                oldOverlayText=$(grep dtoverlay "$configFile" | grep $port)
+            else
+                oldOverlayText=""
+                removeOverlay=false
             fi
-            if $portDefined && [ -f "$portConfigDir/overlay" ]; then
+            if $portDefined && [ -f "$portConfigDir/overlay" ] && [ ! -f "$portConfigDir/MANUAL_OVERLAY" ] ; then
                 installOverlay=true
-                newOverlayText=$(grep dtoverlay "$portConfigDir/overlay")
+                newOverlayText=$(grep dtoverlay "$portConfigDir/overlay"| grep $port)
             else
                 installOverlay=false
+                newOverlayText=""
             fi
+
             # correct overlay already installed - don't make changes
-            if $overlayExists && $installOverlay ; then
-                if [ "$oldOverlayText" == "$newOverlayText" ]; then
-                  overlayExists=false
-                  installOverlay=false
-                fi
+            if $removeOverlay && $installOverlay && [ "$oldOverlayText" == "$newOverlayText" ]; then
+                removeOverlay=false
+                installOverlay=false
             fi
-            if $overlayExists ; then
+            if $removeOverlay ; then
                 logMessage "removing CAN overlay for $port from config.txt"
                 sed -i -e "/#### begin CAN overlay $port/,/#### end CAN overlay/d" "$configFile"
                 rebootNeeded=true
@@ -535,7 +561,8 @@ updateCanFiles ()
                 rebootNeeded=true
             fi
         fi
-        # add service if port is active and if service does not already exist
+
+       # add service if port is active and if service does not already exist
         for service in $services; do
             if $portDefined ; then
                 destDir="$serviceDir/$service.$port"

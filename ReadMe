@@ -45,6 +45,10 @@ https://github.com/victronenergy/venus/wiki/RaspberryPi-CAN-Interfaces
 
 and for USB interfaces, with my own exeperiences with CANable.
 
+Conflicts can sometimes occur when modifications to config.txt are needed to configure CANbus interfaces.
+For this reason, this script asks before installing overlays into the config.txt file.
+If overlay lines are not added to config.txt, it will be necessary for the installer to add the necessary lines manually.
+
 
 Setup:
 
