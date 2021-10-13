@@ -1,0 +1,8 @@
+#### begin CAN overlay DEV
+# Waveshare 2-Channel Isolated CAN Expansion HAT
+# replace DEV with e.g., can0
+[all]
+dtparam=spi=on
+dtoverlay=mcp2515-can1,oscillator=16000000,interrupt=25
+dtoverlay=mcp2515-can0,oscillator=16000000,interrupt=23
+#### end CAN overlay
