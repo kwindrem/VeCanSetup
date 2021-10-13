@@ -1,0 +1,7 @@
+#### begin CAN overlay DEV
+# 2-channel Isolated CANbus Hat 16 MHz crystal
+# Activates channel 2 ONLY
+[all]
+dtparam=spi=on
+dtoverlay=mcp2515-DEV,oscillator=16000000,interrupt=25
+#### end CAN overlay

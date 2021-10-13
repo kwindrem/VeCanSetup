@@ -11,6 +11,7 @@ The setup script's actions are:
             Lawicel CANUSB and other SLCAN USB
             VScom USB-CAN+
             Waveshare Hat
+            Waveshare 2-channel Hat - uses separate overlays for can0 and can1 that can't be interchanged
     Remove a port's configuration
     Install the configured ports into the Venus file system
     Uninstall/restore all Venus files installed by this package
