@@ -3,5 +3,5 @@
 # replace DEV with e.g., can0
 [all]
 dtparam=spi=on
-dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000
+dtoverlay=mcp2515-DEV,oscillator=12000000,interrupt=25,spimaxfrequency=2000000
 #### end CAN overlay
