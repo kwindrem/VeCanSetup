@@ -12,6 +12,7 @@ The setup script's actions are:
             VScom USB-CAN+
             Waveshare Hat
             Waveshare 2-channel Hat - uses separate overlays for can0 and can1 that can't be interchanged
+            InnoMaker USB2CAN
     Remove a port's configuration
     Install the configured ports into the Venus file system
     Uninstall/restore all Venus files installed by this package

@@ -1,0 +1,19 @@
+# InnoMaker USB2CAN
+
+# replace DEV with CAN port (e.g., can0)
+# rename file to e.g., can0.rules
+
+ACTION=="add",\
+  ENV{ID_BUS}=="usb",\
+  ENV{ID_MODEL_ID}=="606f",\
+  ENV{ID_VENDOR_ID}=="1d50",\
+  SYMLINK+="ttyDEV",\
+  RUN+="/usr/bin/logger [udev] InnoMaker USB2CAN detected DEV",\
+  RUN+="/usr/local/bin/DEVadd.sh $kernel", ENV{VE_SERVICE}="ignore"\
+  
+ACTION=="remove",\
+  ENV{ID_BUS}=="usb",\
+  ENV{ID_MODEL_ID}=="606f",\
+  ENV{ID_VENDOR_ID}=="1d50",\
+  RUN+="/usr/bin/logger [udev] InnoMaker USB2CAN removed DEV",\
+  RUN+="/usr/local/bin/DEVremove.sh"
