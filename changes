@@ -1,3 +1,6 @@
+v2.13:
+	fixed: corruption of canbus_ports file
+
 v2.12
 	support for SetupHelper v4
 	add exit codes

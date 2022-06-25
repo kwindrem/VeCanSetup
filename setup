@@ -45,26 +45,31 @@ if [ -f /etc/venus/machine ]; then
         raspberrypi*)
             configFile="/u-boot/config.txt"
             portsList="can0 can1"
+            stockPortsList=""
             gxDevice="Raspberry PI - no built-in CAN ports"
             ;;
         einstein)
             configFile=""
             portsList=""
+			stockPortsList="can0 can1"
             gxDevice="Cerbo GX - 2 built-in CAN ports - changes not allowed"
             ;;
         beaglebone)
             configFile=""
             portsList=""
+			stockPortsList="can0 can1"
             gxDevice="Venus GX - 2 CAN ports - changes not allowed"
             ;;
         ccgx)
             configFile=""
             portsList="can1"
+			stockPortsList="can0"
             gxDevice="CCGX - 1 CAN port - can add second port"
             ;;
         *)
             gxDevice="unsupported Venus device type $machine - changes not allowed"
             configFile=""
+			stockPortsList=""
             portsList=""
         ;;
     esac
@@ -155,6 +160,12 @@ getPortInfo ()
     if [ -d "$portConfigDir" ] && [ -f "$portConfigDir/description" ]; then
         portInfoText=$(cat "$portConfigDir/description")
     elif [ -e  "$veCanPortsFile" ] && [ $(grep -c "$1" "$veCanPortsFile") != 0 ]; then
+		for stockPort in $stockPortsList ; do
+			if [ "$1" == "$stockPort" ]; then
+				portInfoText="stock port - can't be reconfigured"
+				return
+			fi
+		done
         portInfoText="could be CONFIGURED ELSEWHERE"
     else
         portInfoText="no configuration"
@@ -467,6 +478,7 @@ if [ $scriptAction == 'NONE' ] ; then
                 displayLog $setupLogFile
                 ;;
             [qQ]*)
+                scriptAction='EXIT'
                 break
                 ;;
             *)
@@ -484,30 +496,19 @@ fi
 updateCanFiles ()
 {
     # start with stock canbus_ports
-	if [ -f "$veCanPortsFile" ]; then
-		cp "$veCanPortsFile" "$scriptDir/tempPorts"
-	# otherwise start with an empty temp file
-	else
-		echo "" > "$scriptDir/tempPorts"
-	fi
-    
-    for port in $portsList; do
-        # treat uninstall as if there is nothing specified for the port
-        # all files for all ports will be removed/restored
-        if [ $scriptAction == 'UNINSTALL' ] ; then
-            portDefined=false
-        else
-            portConfigDir="$setupOptionsDir/$port".config
-            if [ -e "$portConfigDir" ]; then
-                portDefined=true
-            else
-                portDefined=false
-            fi
-        fi
+	rm -f "$scriptDir/tempPorts"
+    for port in $stockPortsList; do
+		echo "#### stock port $port"
+		echo "$port" >> "$scriptDir/tempPorts"
+	done
 
-        # update temp copy of VeCan ports file
-        if $portDefined ; then
-            echo "$port" >> "$scriptDir/tempPorts"
+
+    for port in $portsList; do
+        # add ports with configurations
+		portConfigDir="$setupOptionsDir/$port".config
+        if [ -e "$portConfigDir" ]; then
+			echo "#### adding $port"
+			echo "$port" >> "$scriptDir/tempPorts"
         fi
 
         if $portDefined && [ ! -e $binDir ]; then
@@ -597,6 +598,7 @@ updateCanFiles ()
     if [ $scriptAction == 'UNINSTALL' ]; then
         restoreActiveFile "$veCanPortsFile"
     else
+		echo "#### updating file"
         updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
     fi
     rm -f "$scriptDir/tempPorts"
@@ -634,6 +636,11 @@ if ! $runningAtBoot ; then
         echo "new interfaces will not become active until after a reboot"
         rebootNeeded=true
     fi
+fi
+
+# handle quit command after reporting status
+if [ $scriptAction == 'EXIT' ] ; then
+	exit $EXIT_SUCCESS
 fi
 
 # thats all folks - SCRIPT EXITS INSIDE THE FUNCTION
