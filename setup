@@ -498,16 +498,13 @@ updateCanFiles ()
     # start with stock canbus_ports
 	rm -f "$scriptDir/tempPorts"
     for port in $stockPortsList; do
-		echo "#### stock port $port"
 		echo "$port" >> "$scriptDir/tempPorts"
 	done
-
 
     for port in $portsList; do
         # add ports with configurations
 		portConfigDir="$setupOptionsDir/$port".config
         if [ -e "$portConfigDir" ]; then
-			echo "#### adding $port"
 			echo "$port" >> "$scriptDir/tempPorts"
         fi
 
@@ -597,9 +594,9 @@ updateCanFiles ()
 
     if [ $scriptAction == 'UNINSTALL' ]; then
         restoreActiveFile "$veCanPortsFile"
-    else
-		echo "#### updating file"
-        updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
+    elif [ -f "$scriptDir/tempPorts" ]; then
+		echo "#### updating canbus_ports file"
+		updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
     fi
     rm -f "$scriptDir/tempPorts"
 

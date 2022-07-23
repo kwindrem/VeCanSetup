@@ -1,3 +1,6 @@
+v2.14:
+	fixed: reinstall fails when no ports have been configured
+
 v2.13:
 	fixed: corruption of canbus_ports file
 
