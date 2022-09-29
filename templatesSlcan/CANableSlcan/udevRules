@@ -1,0 +1,46 @@
+# udev rules slcand devices for v2.90 and beyond
+
+# DELETE the placeholder lines if they aren't used !!
+# rename file to e.g., can0.rules
+# replace ...PH (place holder) with actual values
+#
+# the ip link up command is needed only for Victron OS prior to v2.90~18
+#	those lines should be deleted for v2.90~18 and newer
+#
+# likewise, the code to add a custom name applies only to v2.90~18 and newer
+#	related lines should also be deleted
+
+# find interface and connect to CANbus port
+ACTION=="add",\
+  ENV{ID_BUS}=="usb",\
+  ENV{ID_VENDOR_ID}=="ad50",\
+  ENV{ID_MODEL_ID}=="60c4",\
+  ATTRS{serial}=="SERIAL_PH",\
+  ENV{VE_SERVICE}="ignore",\
+  RUN+= "/usr/local/bin/startSlcand.sh $kernel DEVICE_PH PROFILE_PH",\
+  RUN+="/usr/bin/logger [udev] CANbus device added:\
+    DEVICE_PH\
+    VENDOR_PH\
+    MODEL_PH\
+    PROFILE_PH\
+    $kernel\
+    "
+
+# add CANbus name
+ACTION=="add|move", SUBSYSTEM=="net",\
+  KERNEL=="DEVICE_PH",\
+  ENV{VE_NAME}="NAME_PH",\
+  ENV{VE_CAN_CONFIG}="PROFILE_PH",\
+  RUN+="/usr/bin/logger [udev] add name\
+    NAME_PH\
+    to\
+    DEVICE_PH\
+    "
+
+# slcand processes stick around after device is unplugged - stop them here
+# slcand will not quit when the device is unplugged so it is necessary to
+#	kill the related processes as part of the remove rule
+ACTION=="remove",\
+  KERNEL=="DEVICE_PH",\
+  RUN+="/usr/bin/logger [udev] DEVICE_PH device removed",\
+  RUN+="/usr/local/bin/stopSlcand.sh DEVICE_PH"

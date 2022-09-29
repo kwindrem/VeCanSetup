@@ -1,3 +1,9 @@
+v3.0:
+	accommodate additional CANbus ports available starting with v2.90~18
+	depreciating slcan interfaces 
+	add custom sclan configuraiton with data mining from system log info
+	accommodate slcan interfaces for bms-only and ve-can only
+
 v2.14:
 	fixed: reinstall fails when no ports have been configured
 

@@ -1,60 +1,142 @@
 This package manages Victrion VenusOs VeCan (aka CANbus) ports
 
+As of Venus OS v2.90~18:
+	The number of CANbus ports is unlimited
+	GS USB CANbus interfaces will become active when plugged in or at system boot
+		and automatically assigned to a can service (e.g. can3).
+	The order of CANbus interaces detected on USB will determine the can service number.
+	Use of VeCanSetup is OPTIONAL but provides some advantages:
+		insures can service assignments are deterministic regardless of discovery order
+		allows naming the interfaces in the Services menu to reduce confusion
+		alows Raspberry PI CANbus hats to be configured
+		allows slcan USB interfacs to be configured and used as a VE.Can interface
+			note however that slcan interfaces are not recommended (see below)
+
+
 The setup script's actions are:
 
-    Add - add (or modify) a port's configuraiton
-        Configuration simply requires selecting one of the supported interfaces:
-            CANable (both slcand and candelight firmware)
+    Add (or modify) a port's configuraiton
+        supported interfaces:
+            CANable with Candelight firmware
             Canberry Hat
             PCAN-USB (which is also the Victron's CANUSB)
             PiCan Hat
-            Lawicel CANUSB and other SLCAN USB
-            VScom USB-CAN+
             Waveshare Hat
-            Waveshare 2-channel Hat - uses separate overlays for can0 and can1 that can't be interchanged
-            InnoMaker USB2CAN
-    Remove a port's configuration
+            Waveshare 2-channel Hat
+            Waveshare 2-channel FD Hat
+			slcan USB device (not recommended)
+				requires customizing parameters
+    Delete a port's configuration
     Install the configured ports into the Venus file system
     Uninstall/restore all Venus files installed by this package
-    leaving the system in a stock configuraiton
+		leaving the system in a stock configuraiton
+
+CANbus Hat boards (Raspberry PI only)
+	Hat boards that plug onto the 40-pin header on a Raspberry PI 2, 3 or 4 presend unique challenges for the system designer.
+	GPIO pins used by these interfaces may conflict with other uses such as Venus OS relays and digital inputs
+	or other Hat boards.
+	Some dual-channel CANbus Hat boards use a single SPI bus, while others (Waveshare dual-channel FD CANbus Hat) use two SPI buses.
+	There seems to be no consistency for the selection of pins for chip select and interrupt GPIOs.
+	For these reasons, VeCanSetup assumes only one Hat board in the system, regardless of type (CANbus or other).
+	RaspberryPiGpioSetup provides alternate GPIO relay and digital input assignments to avoid conflicts
+		ONLY with the Waveshare dual channel Hats (FD and non-FD versions).
+	Other single-channel hats should work as long as they use GPIO 8 for it's chip select and GPIO 25 for its interrupt.
+	More complex systems are beyond the scope of VeCanSetup.
+
+WARNING: Interfaces based on slcan are not recommended:
+	Packets are sometimes dropped especially with heavy CANbus loading
+	Error recovery from bus errors such as a short may not occur
+	Speeds for the CANbus can not be changed after the interface is brought up
+	
+	USB interfaces using Candelight or other GS USB firmware are much more reliable and many low cost units are available.
+	CANable interfaces can even be reflashed to switch from slcan to Candelight.
 
 The script also hooks into SetupHelper's boot-time reinstall mechanism which reinstalls Venus file system modifications after they are overwritten by a Venus OS update
 
-Two VeCan ports are defined for these systems: can0 and can1, although support for more could easily be added
+Prior to Venus OS v2.90~18, only two VeCan ports (can0 and can 1) are defined.
+	Built-in, USB and hat interfaces compete for these two ports
+Starting with v2.90~18, an unlimited number of CANbus interfaces may be configured.
 
 
-Setting up a VeCan interface is a two-step process:
-    select a port and choose an interface, or remove the configuration
-    install the changes
+Starting with v2.90~18, USB CANbus devices with GS USB firmware (e.g., Candelight)
+	with no specific udev rules will automatically configure and become operational.
+	These automatic configurations could conflict with each other. 
+		For example a USB interface may be assigned can0, blocking a CANbus hat channel assigned to can0 in the dtoverlay instructions.
+	In addition, any built-in ports are assigned beginning with can0.
+		These won't conflict with hat assignments since Raspberry PIs have no built-in ports.
 
-Separate steps allow for review before changes are committed to the running system
+In order to avoid conflicts with automaic configuration VeCanSetup assigns ports starting at can10 for USB interfaces.
+	CANbus hats will be assigned to can8 and can9.
 
-Multiple interfaces of the same type is possible if serial numbers are supported at the udev level. 
-For example, CANable with Candelight software supports multiple interfaces.
+Note that the VeCanSetup setup script must be run from the command line to configure each CANbus port. 
+	Following that, VeCanSetup will reinstall without command line intervention.
 
-This script does it's best to determine the serial number, either from udev info or from dmesg (boot messages).
+As stated above, slcan-based interfaces should be avoided.
 
-Those choices are presented as an option when adding the device.
-If neither are appropriate, manual entry is offered as a last resort.
-If no serial number is desired (recommended unless multiple interfaces exist),
-reject both guesses and enter nothing at the manual prompt.
+When a template is not available for a specific interface, this script helps this configuration by pulling information
+		from system logs for inserted USB interfaces:
+	Plug a USB slcan CANbus interface into the GX device.
+	Select install, then add then select custom GS USB or slcan device.
+	The system logs are scanned and any potential USB interfaces are reported one at a time.
+	The user is prompted to use this informaiton, or reject it.
+	The process repeats until there are no more entries found in the log.
+	The user then has the option of entering device vendor and model IDs manually.
 
-Using a different interface type for each CANbus should work OK
+USB uniqueness:
+	When multiple USB interfaces are installed, the system must be able to uniquely each one in order to
+	connect an interface to one of the CANbus services.
+	
+	This script builds udev rules that include a vendor ID, model/product ID and a serial number.
+	Not all parameters may be required for unique itendtification.
+	For example, if there is only one instance of for example a model ID, then the connections will be stable.
+	However, if two of the same devices are connected, their vendor and model IDs will be the same and
+	the system will need serial numbers for uniqueness
 
-Note: I have only tested this package with CANable. CANbus hats that support two interfaces are at the most risk of working properly. The configurations for other interfaces was taken from
+Serial numbers:
+	Device serial numbers help with uniqueness.
+	If used and the interface is replaced, you will need to run VeCanSetup again to update the serial number.
+	Including the serial number is recommended only if you have multiple interfaces of the same make/model),
+	Regardless of the choice of a preconfigured or custom interface,
+		the script does it's best to determine the serial number of a device,
+		by looking at system messages logged when a USB interface is plugged in.
 
-https://github.com/victronenergy/venus/wiki/RaspberryPi-CAN-Interfaces
+	A manual serial number entry is offered as a last resort.
 
-and for USB interfaces, with my own exeperiences with CANable.
+Note: I have tested this package with CANable USB Pro interface running slcand, Candelight and PCAN firmware
+	as well as the Waveshare dual-channel CANbus (non FD) Hat on a Raspberry PI 4.
 
-Conflicts can sometimes occur when modifications to config.txt are needed to configure CANbus interfaces.
+	The configurations for other interfaces were taken from the following link but have not been tested:
+
+		https://github.com/victronenergy/venus/wiki/RaspberryPi-CAN-Interfaces
+
+Obviouslly, Hat interfaces only on Raspberry PI platforms.
+
+Conflicts can sometimes occur when modifications to config.txt are needed.
 For this reason, this script asks before installing overlays into the config.txt file.
-If overlay lines are not added to config.txt, it will be necessary for the installer to add the necessary lines manually.
+If overlay lines are not automatically added to config.txt, it will be necessary for the installer to add the necessary lines manually.
+
+
+As an aid to sorting out GPIO conflicts, I have provided a list of GPIO assignments in this package.
 
 
 Setup:
 
-The easiest way to install this code IF the Venus device has internet access is to run the following command:
+VeCanSetup requires that SetupHelper is installed first.
+
+The easiest way to install VeCanSetup is to do a "blind install" of SetupHelper and then add the VeCanSetup package
+via the PackageManager menus.
+
+Refer to SetupHelper here:
+
+https://github.com/kwindrem/SetupHelper
+
+Once SetupHelper is installed, you can add VeCanSetup by placing the archive from its GitHub repo on a USB stick or SD card and inserting it in the GX device (CCGX, Cerbo, etc.). PackageManager will detect the archive and transfer the package to local storage. It will then appear in the Active packages list.
+
+The VeCanSetup compressed archive can be downloaded here:
+
+https://github.com/kwindrem/VeCanSetup/archive/refs/tags/latest.tar.gz
+
+Another install option IF the Venus device has internet access is to run the following command:
 
 wget -qO - https://github.com/kwindrem/VeCanSetup/archive/current.tar.gz | tar -xzf - -C /data
 mv /data/VeCanSetup-current /data/VeCanSetup
@@ -70,26 +152,6 @@ put the stick in the Venus device and reboot.
 When Venus boots, it will unarchive the file to /data/VeCanSetup-current
 
 mv /data/VeCanSetup-current /data/VeCanSetup
-
-
-You must also install SetupHelper
-
-wget -qO - https://github.com/kwindrem/SetupHelper/archive/current.tar.gz | tar -xzf - -C /data
-mv /data/SetupHelper-current /data/SetupHelper
-
-or click on this link in a web browser:
-
-https://github.com/kwindrem/SetupHelper/archive/current.tar.gz
-mv current.tar.gz SetupHelper.tar.gz
-
-rename the resulting .tar.gz file to venus-data.tar.gz
-copy the venus-data.tar.gz to a USB stick,
-put the stick in the Venus device and reboot.
-
-mv /data/SetupHelper-current /data/SetupHelper
-
-Note, you must do VeCanSetup and SetupHelper on a separate flash drive since they use
-the same file name on the flash drive.
 
 If you are installing multiple packages, SetupHelper need only be installed once.
 

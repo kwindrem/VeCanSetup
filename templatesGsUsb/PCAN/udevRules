@@ -1,0 +1,21 @@
+# udev rules for gs USB devices
+
+# replace ...PH (place holder) with actual values
+# DELETE the placeholder lines if they aren't used !!
+# rename file to e.g., can0.rules
+#
+
+ACTION=="add", SUBSYSTEM=="net",\
+  ENV{ID_VENDOR_ID}==0x72",\
+  ENV{ID_MODEL_ID}=="0101",\
+  ATTRS{serial}=="SERIAL_PH",\
+  NAME="DEVICE_PH",\
+  ENV{VE_NAME}="NAME_PH",\
+  RUN+="/usr/local/bin/startGsUsb.sh DEVICE_PH"
+  RUN+="/usr/bin/logger [udev] CANbus device added:\
+    NAME_PH\
+    DEVICE_PH\
+    VENDOR_PH\
+    MODEL_PH\
+    SERIAL_PH\
+    "

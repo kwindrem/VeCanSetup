@@ -1,0 +1,16 @@
+# udev rules for Waveshare 1-channel CANbus Hat
+
+# replace ...PH (place holder) with actual values
+# DELETE the placeholder lines if they aren't used !!
+# rename file to e.g., can0.rules
+
+# find interface and connect directly to CANbus port
+ACTION=="add", SUBSYSTEM=="net",\
+  KERNELS=="spi0.0",\
+  NAME="DEVICE_PH1",\
+  ENV{VE_NAME}="NAME1_PH",\
+  RUN+="/usr/bin/logger [udev] CANbus device added:\
+    NAME1_PH\
+    DEVICE1_PH\
+    spi0.0\
+    "

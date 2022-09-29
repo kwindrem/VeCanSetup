@@ -1,0 +1,9 @@
+#### begin CAN overlay
+# Waveshare 2-channel Isolated CANbus FD Hat
+# instantiates as can0 and can1 ONLY !!!
+# use udev rules to rename
+[all]
+dtoverlay=spi1-1cs
+dtoverlay=mcp251xfd-can0,spi0-0,interrupt=25
+dtoverlay=mcp251xfd-can1,spi1-0,interrupt=23
+#### end CAN overlay
