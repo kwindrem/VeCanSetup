@@ -1,3 +1,6 @@
+v3.1:
+	fixed: typo in udev rules for GsUsb interfaces preventing startup prior to v2.90
+
 v3.0:
 	accommodate additional CANbus ports available starting with v2.90~18
 	depreciating slcan interfaces 

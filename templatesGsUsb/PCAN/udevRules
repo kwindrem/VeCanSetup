@@ -11,7 +11,7 @@ ACTION=="add", SUBSYSTEM=="net",\
   ATTRS{serial}=="SERIAL_PH",\
   NAME="DEVICE_PH",\
   ENV{VE_NAME}="NAME_PH",\
-  RUN+="/usr/local/bin/startGsUsb.sh DEVICE_PH"
+  RUN+="/usr/local/bin/startGsUsbCan.sh DEVICE_PH"
   RUN+="/usr/bin/logger [udev] CANbus device added:\
     NAME_PH\
     DEVICE_PH\
