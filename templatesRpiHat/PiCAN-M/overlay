@@ -1,0 +1,10 @@
+#### begin CAN overlay
+# PiCAN-M CANbus Hat (2 channels)
+# instantiates as can0 and can1 ONLY !!!
+# use udev rules to rename
+[all]
+dtparam=spi=on
+dtoverlay=mcp2515-can0-overlay,oscillator=16000000,interrupt=25,spimaxfrequency=500000
+dtoverlay=mcp2515-can1-overlay,oscillator=16000000,interrupt=24,spimaxfrequency=500000
+dtoverlay=spi-bcm2835-overlay
+#### end CAN overlay

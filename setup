@@ -6,8 +6,8 @@
 # Starting with v2.90~18, Venus OS supports unlimited number of CANbus ports
 #
 # for Venus OS versions prior to v2.90~18: only two CANbus ports are supported, including the built-in ports
-#		so Cerbo for example will not allow additional ports to be added
-#		beyond it's two built-in ports
+#        so Cerbo for example will not allow additional ports to be added
+#        beyond it's two built-in ports
 
 # installs shell scripts, overlays, udev rules
 # installs CAN dBus services (for Venus OS prior to v2.90~18)
@@ -39,9 +39,9 @@ source "/data/SetupHelper/CommonResources"
 
 # if this is a install without user interaction, exit if new options not present
 if [ $scriptAction == 'INSTALL' ] && [ ! -f "$setupOptionsDir/newOptionsSet" ]; then
-	logMessage "Error: new configs not present - can't allow reinstall"
-	logMessage "must run setup script from command line and configure ports"
-	exit $EXIT_OPTIONS_NOT_SET
+    logMessage "Error: new configs not present - can't allow reinstall"
+    logMessage "must run setup script from command line and configure ports"
+    exit $EXIT_OPTIONS_NOT_SET
 fi
 
 
@@ -60,7 +60,7 @@ installServices=false
 manageCanbusPortsFile=false
 supportPortName=false
 
-# CAN interfce templates - must be set after sourcing CommonResources
+# CAN interface templates - must be set after sourcing CommonResources
 gsUsbTemplatesDir="$scriptDir/templatesGsUsb"
 hatTemplatesDir="$scriptDir/templatesRpiHat"
 slcanTemplatesDir="$scriptDir/templatesSlcan"
@@ -76,203 +76,203 @@ hatConfig="$configsDir/hat.config"
 # reports USB device info
 #
 # if at least one pareameter is passed, user is prompted to select each
-# 	discovered device
+#     discovered device
 # if answering yes to the prompt, global variables are updated
-#	so that the caller can use the information to build a custom sclan config
+#    so that the caller can use the information to build a custom sclan config
 # if one is selected, funciton returns with 1
 #
 # if no prompt, all discovered devices are output to the terminal and the
-#	function returns with 0
+#    function returns with 0
 
 reportUsbInfo ()
 {
-	local deviceId=""
-	local reportDevice=false
-	local serialNumber=""
-	local modelId=""
-	local vendorId=""
-	local lastSerialNumber=""
-	local lastModelId=""
-	local lastVendorId=""
+    local deviceId=""
+    local reportDevice=false
+    local serialNumber=""
+    local modelId=""
+    local vendorId=""
+    local lastSerialNumber=""
+    local lastModelId=""
+    local lastVendorId=""
 
-	if [ $# -eq 0 ] ; then
-		echo "USB devices from system log"
-	fi
+    if [ $# -eq 0 ] ; then
+        echo "USB devices from system log"
+    fi
 
-	while read -u 9 type dev info; do
-		if [ "$type" != "usb" ]; then
-			continue
-		fi
-		if [[ $info == "New USB device strings"* ]]; then
-			continue
-		fi
-		if [[ $dev == "usb"* ]]; then
-			reportDevice=false
-			continue
-		fi
-		if [[ $info == *disconnect* ]]; then
-			continue
-		fi
-		if [[ $info == Product*Hub ]]; then
-			reportDevice=false
-			deviceId=""
-			continue
-		fi
-		if [[ $info == "new full-speed USB"* ]]; then
-			continue
-		fi
+    while read -u 9 type dev info; do
+        if [ "$type" != "usb" ]; then
+            continue
+        fi
+        if [[ $info == "New USB device strings"* ]]; then
+            continue
+        fi
+        if [[ $dev == "usb"* ]]; then
+            reportDevice=false
+            continue
+        fi
+        if [[ $info == *disconnect* ]]; then
+            continue
+        fi
+        if [[ $info == Product*Hub ]]; then
+            reportDevice=false
+            deviceId=""
+            continue
+        fi
+        if [[ $info == "new full-speed USB"* ]]; then
+            continue
+        fi
 
-		# end of current device
-		if [ "$deviceId" != "" ] &&  [ "$dev" != "$deviceId" ]; then
-			deviceId=""
-		fi
+        # end of current device
+        if [ "$deviceId" != "" ] &&  [ "$dev" != "$deviceId" ]; then
+            deviceId=""
+        fi
 
-		# new device
-		if [[ $info == "New USB device found"* ]]; then
-			if $reportDevice ; then
-				if [ "$serialNumber" != "$lastSerialNumber" ] || [ "$vendorId" != "$lastVendorId" ] || [ "$modelId" != "$lastModelId" ]; then
-					echo "$report"
-					if [ $# -gt 0 ] ; then
-						yesNoPrompt "$*"
-						if $yesResponse ; then
-							deviceSerialNumber="$serialNumber"
-							deviceVendorId="$vendorId"
-							deviceModelId="$modelId"
-							return 1
-						fi
-					fi
-					lastSerialNumber="$serialNumber"
-					lastVendorId="$vendorId"
-					lastModelId="$modelId"
-				fi
-			fi
-			reportDevice=true
-			deviceId=$dev
-			serialNumber=""
-			modelId=""
-			vendorId=""
-			report=""
-			IFS=',=' read dummy1 dummy2 vendorId dummy3 modelId dummy4 <<< $info
-		fi
+        # new device
+        if [[ $info == "New USB device found"* ]]; then
+            if $reportDevice ; then
+                if [ "$serialNumber" != "$lastSerialNumber" ] || [ "$vendorId" != "$lastVendorId" ] || [ "$modelId" != "$lastModelId" ]; then
+                    echo "$report"
+                    if [ $# -gt 0 ] ; then
+                        yesNoPrompt "$*"
+                        if $yesResponse ; then
+                            deviceSerialNumber="$serialNumber"
+                            deviceVendorId="$vendorId"
+                            deviceModelId="$modelId"
+                            return 1
+                        fi
+                    fi
+                    lastSerialNumber="$serialNumber"
+                    lastVendorId="$vendorId"
+                    lastModelId="$modelId"
+                fi
+            fi
+            reportDevice=true
+            deviceId=$dev
+            serialNumber=""
+            modelId=""
+            vendorId=""
+            report=""
+            IFS=',=' read dummy1 dummy2 vendorId dummy3 modelId dummy4 <<< $info
+        fi
 
-		if [ "$deviceId" != "" ]; then
-			report+=$'\n'"$type $dev $info"
-			if [[ $info == *"SerialNumber"* ]]; then
-				read dummy serialNumber <<< $info
-			fi
-			fi
+        if [ "$deviceId" != "" ]; then
+            report+=$'\n'"$type $dev $info"
+            if [[ $info == *"SerialNumber"* ]]; then
+                read dummy serialNumber <<< $info
+            fi
+            fi
 
-	done 9< <(dmesg | sed -e 's/.*] //')
+    done 9< <(dmesg | sed -e 's/.*] //')
 
-	if $reportDevice ; then
-		if [ "$serialNumber" != "$lastSerialNumber" ] || [ "$vendorId" != "$lastVendorId" ] || [ "$modelId" != "$lastModelId" ]; then
-			echo "$report"
-			if [ $# -gt 0 ] ; then
-				yesNoPrompt "$*"
-				if $yesResponse ; then
-					deviceSerialNumber=$serialNumber
-					deviceVendorId=$vendorId
-					deviceModelId=$modelId
-					return 1
-				fi
-			fi
-		fi
-	fi
-	return 0
+    if $reportDevice ; then
+        if [ "$serialNumber" != "$lastSerialNumber" ] || [ "$vendorId" != "$lastVendorId" ] || [ "$modelId" != "$lastModelId" ]; then
+            echo "$report"
+            if [ $# -gt 0 ] ; then
+                yesNoPrompt "$*"
+                if $yesResponse ; then
+                    deviceSerialNumber=$serialNumber
+                    deviceVendorId=$vendorId
+                    deviceModelId=$modelId
+                    return 1
+                fi
+            fi
+        fi
+    fi
+    return 0
 }
 
 
 # check for GPIO conflicts between CANbus hat overlay and relays / digital inputs
 #
-#	$1 is the CANbus template directory
+#    $1 is the CANbus template directory
 #
-#	reports the conflict GPIOs and returns 1 if conflicts found
-#	otherwise returns 0
+#    reports the conflict GPIOs and returns 1 if conflicts found
+#    otherwise returns 0
 
 function checkForGpioConflicts ()
 {
-	local templateDir=$1
+    local templateDir=$1
 
-	# if no gpios are defined for relays and digital inputs, there can't be any conflicts
-	local gpioFile="/etc/venus/gpio_list"
-	local venusGpios
-	if [ -f "$gpioFile" ]; then
-		venusGpios=$(grep -v -e '#' -e '^$' -e '^-' $gpioFile | awk '{print $1}' | xargs)
-	else
-		return 0
-	fi
+    # if no gpios are defined for relays and digital inputs, there can't be any conflicts
+    local gpioFile="/etc/venus/gpio_list"
+    local venusGpios
+    if [ -f "$gpioFile" ]; then
+        venusGpios=$(grep -v -e '#' -e '^$' -e '^-' $gpioFile | awk '{print $1}' | xargs)
+    else
+        return 0
+    fi
 
-	local spi0used=false
-	local spi1used=false
-	local spi10used=false
-	local spi11used=false
-	local spi12used=false
-	local canGpios=""
-	local canGpio=""
-	local venusGpio
-	local venusGpios
+    local spi0used=false
+    local spi1used=false
+    local spi10used=false
+    local spi11used=false
+    local spi12used=false
+    local canGpios=""
+    local canGpio=""
+    local venusGpio
+    local venusGpios
 
-	while read -u 9 line; do
-		if [ -z "$line" ] || [[ "$line" == "#"* ]]; then
-			continue
-		elif [[ "$line" == *"spi1-"*"cs" ]]; then
-			continue
-		elif [[ "$line" == *"spi"*"on" ]]; then
-			spi0used=true
-		elif [[ "$line" == *"spi0"*  ]]; then
-			spi0used=true
-		elif [[ "$line" == *"spi1"*  ]]; then
-			spi1used=true
-			if [[ "$line" == *"spi1-0"*  ]]; then
-				spi10used=true
-			fi
-			if [[ "$line" == *"spi1-1"*  ]]; then
-				spi11used=true
-			fi
-			if [[ "$line" == *"spi1-2"*  ]]; then
-				spi12used=true
-			fi
-		fi
-		if [[ "$line" == *"interrupt"* ]] ;then
-			interrupt=$(echo $line | sed -n -e 's/^.*interrupt=//p' | sed -e 's/,.*//')
-			canGpios+="$interrupt "
-		fi
-	done 9< "$templateDir/overlay"
+    while read -u 9 line; do
+        if [ -z "$line" ] || [[ "$line" == "#"* ]]; then
+            continue
+        elif [[ "$line" == *"spi1-"*"cs" ]]; then
+            continue
+        elif [[ "$line" == *"spi"*"on" ]]; then
+            spi0used=true
+        elif [[ "$line" == *"spi0"*  ]]; then
+            spi0used=true
+        elif [[ "$line" == *"spi1"*  ]]; then
+            spi1used=true
+            if [[ "$line" == *"spi1-0"*  ]]; then
+                spi10used=true
+            fi
+            if [[ "$line" == *"spi1-1"*  ]]; then
+                spi11used=true
+            fi
+            if [[ "$line" == *"spi1-2"*  ]]; then
+                spi12used=true
+            fi
+        fi
+        if [[ "$line" == *"interrupt"* ]] ;then
+            interrupt=$(echo $line | sed -n -e 's/^.*interrupt=//p' | sed -e 's/,.*//')
+            canGpios+="$interrupt "
+        fi
+    done 9< "$templateDir/overlay"
 
-	if $spi0used ; then
-		canGpios+="7 8 9 10 11 "
-	fi
-	if $spi1used ; then
-		canGpios+="19 20 21 "
-	fi
-	if $spi10used ; then
-		canGpios+="18 "
-	fi
-	if $spi11used ; then
-		canGpios+="17 "
-	fi
-	if $spi12used ; then
-		canGpios+="16 "
-	fi
+    if $spi0used ; then
+        canGpios+="7 8 9 10 11 "
+    fi
+    if $spi1used ; then
+        canGpios+="19 20 21 "
+    fi
+    if $spi10used ; then
+        canGpios+="18 "
+    fi
+    if $spi11used ; then
+        canGpios+="17 "
+    fi
+    if $spi12used ; then
+        canGpios+="16 "
+    fi
 
-	local conflictGpios=""
-	local venusGpio
-	for venusGpio in $venusGpios; do
-		for canGpio in $canGpios; do
-			if (( $venusGpio == $canGpio )); then
-				conflictGpios+="$canGpio "
-			fi
-		done
-	done
+    local conflictGpios=""
+    local venusGpio
+    for venusGpio in $venusGpios; do
+        for canGpio in $canGpios; do
+            if (( $venusGpio == $canGpio )); then
+                conflictGpios+="$canGpio "
+            fi
+        done
+    done
 
-	# report conflicts and return non-zero
-	if [ ! -z "$conflictGpios" ]; then
-		echo "GPIO(s) $conflictGpios conflict with Venus OS relay and digital input assignments"
-		return 1
-	# no conflicts - return 0
-	else
-		return 0
-	fi
+    # report conflicts and return non-zero
+    if [ ! -z "$conflictGpios" ]; then
+        echo "GPIO(s) $conflictGpios conflict with Venus OS relay and digital input assignments"
+        return 1
+    # no conflicts - return 0
+    else
+        return 0
+    fi
 }
 
 
@@ -284,112 +284,112 @@ function checkForGpioConflicts ()
 
 addUsbConfig ()
 {
-	local port="$1"
-	local templates
-	local template
-	local usbTemplates
-	local descriptionFile
-	local description=""
+    local port="$1"
+    local templates
+    local template
+    local usbTemplates
+    local descriptionFile
+    local description=""
     local portName
     local isCustom
-	local listNumber
-	local slcandOptions
+    local listNumber
+    local slcandOptions
 
     # display device type list
     echo
-	local count=0
-	echo "GS USB device types"
-	templates=$(ls -d "$gsUsbTemplatesDir/"* )
-	for template in $templates ; do
-		descriptionFile="$template/description"
-		if [ -f "$descriptionFile" ]; then
-			description=$(head -n 1 "$descriptionFile")
-		else
-			description="no description - directory name: "$(basename "$template")
-		fi
-		(( listNumber = $count + 1 ))
-		echo "  $listNumber) $description"
-		usbTemplates[$count]=$template
-		((count++))
-	done
-	echo "slcan device types -- not recommended"
-	templates=$(ls -d "$slcanTemplatesDir/"* )
-	for template in $templates ; do
-		descriptionFile="$template/description"
-		if [ -f "$descriptionFile" ]; then
-			description=$(head -n 1 "$descriptionFile")
-		else
-			description="no description - directory name: "$(basename "$template")
-		fi
-		(( listNumber = $count + 1 ))
-		echo "  $listNumber) $description"
-		usbTemplates[$count]=$template
-		((count++))
-	done
+    local count=0
+    echo "GS USB device types"
+    templates=$(ls -d "$gsUsbTemplatesDir/"* )
+    for template in $templates ; do
+        descriptionFile="$template/description"
+        if [ -f "$descriptionFile" ]; then
+            description=$(head -n 1 "$descriptionFile")
+        else
+            description="no description - directory name: "$(basename "$template")
+        fi
+        (( listNumber = $count + 1 ))
+        echo "  $listNumber) $description"
+        usbTemplates[$count]=$template
+        ((count++))
+    done
+    echo "slcan device types -- not recommended"
+    templates=$(ls -d "$slcanTemplatesDir/"* )
+    for template in $templates ; do
+        descriptionFile="$template/description"
+        if [ -f "$descriptionFile" ]; then
+            description=$(head -n 1 "$descriptionFile")
+        else
+            description="no description - directory name: "$(basename "$template")
+        fi
+        (( listNumber = $count + 1 ))
+        echo "  $listNumber) $description"
+        usbTemplates[$count]=$template
+        ((count++))
+    done
 
     echo
-	while true ; do
-		echo
-		read -p "Choose a device type for $port from the list above (by number) (cr for no change): " response
-		if [ -z $response ]; then
-			echo "no interface added"
-			return
-		elif [[ $response =~ ^[0-9]+$ ]] && (( $response >= 1)) && (( $response <= $count )) ; then
-			template=${usbTemplates[ (($response - 1)) ]}
-			break
-		else
-			echo "invalid value, try again"
-		fi
-	done
+    while true ; do
+        echo
+        read -p "Choose a device type for $port from the list above (by number) (cr for no change): " response
+        if [ -z $response ]; then
+            echo "no interface added"
+            return
+        elif [[ $response =~ ^[0-9]+$ ]] && (( $response >= 1)) && (( $response <= $count )) ; then
+            template=${usbTemplates[ (($response - 1)) ]}
+            break
+        else
+            echo "invalid value, try again"
+        fi
+    done
     description=$(cat "$template/description")
 
-	if [ -f "$template/isSlcan" ]; then
-		echo
-		echo "slcan interfaces must be locked to a specific CAN-bus profile"
-		echo "    since changes can not be made after the link is brought up"
-		echo "the following profiles are supported"
-		echo "    bms-only - used only for BMS devices (500 Kb)"
-		echo "    vcan-only - used for general VE.Can devices (250 Kb)"
-		echo
-		yesNoPrompt "Configure for bms-only (y/n)?: "
-		if $yesResponse ; then
-			profile="bms-only"
-		else
-			profile="vcan-only"
-		fi		
-	fi
+    if [ -f "$template/isSlcan" ]; then
+        echo
+        echo "slcan interfaces must be locked to a specific CAN-bus profile"
+        echo "    since changes can not be made after the link is brought up"
+        echo "the following profiles are supported"
+        echo "    bms-only - used only for BMS devices (500 Kb)"
+        echo "    vcan-only - used for general VE.Can devices (250 Kb)"
+        echo
+        yesNoPrompt "Configure for bms-only (y/n)?: "
+        if $yesResponse ; then
+            profile="bms-only"
+        else
+            profile="vcan-only"
+        fi        
+    fi
 
     if [ -f "$template/isCustom" ]; then
-		echo
-		echo "creating custom device"
-		reportUsbInfo "select this device for $port (y/n)?: "
-		if (( $? == 0 )); then
-			/bin/echo -n "Enter device vendor ID (cr for blank): "
-			read deviceVendorId
-			/bin/echo -n "Enter device model ID (cr for blank): "
-			read deviceModelId
-			/bin/echo -n "Enter device serial number (cr for blank): "
-			read deviceSerialNumber
-		fi
-		if  [ -f "$template/isSlcan" ]; then
-			echo "some slcan interfaces require additional slcand options"
-			echo "(e.g. the VSCom interface requires -t hw -S 3000000)"
-			echo
-			read -p "Enter any slcan device specific options here: " slcandOptions
-		else
-			slcandOptions=""
-		fi
+        echo
+        echo "creating custom device"
+        reportUsbInfo "select this device for $port (y/n)?: "
+        if (( $? == 0 )); then
+            /bin/echo -n "Enter device vendor ID (cr for blank): "
+            read deviceVendorId
+            /bin/echo -n "Enter device model ID (cr for blank): "
+            read deviceModelId
+            /bin/echo -n "Enter device serial number (cr for blank): "
+            read deviceSerialNumber
+        fi
+        if  [ -f "$template/isSlcan" ]; then
+            echo "some slcan interfaces require additional slcand options"
+            echo "(e.g. the VSCom interface requires -t hw -S 3000000)"
+            echo
+            read -p "Enter any slcan device specific options here: " slcandOptions
+        else
+            slcandOptions=""
+        fi
 
-		isCustom=true
-	else
-		isCustom=false
-	fi
+        isCustom=true
+    else
+        isCustom=false
+    fi
 
     #copy template directory to config for this port
     baseName=$(basename "$template")
     if [ ! -e "$template" ]; then
         logMessage "ERROR template $baseName not found - can't create config for $port"
-		return
+        return
     fi
 
     # update/create configuration - use temp file until all operations are complete
@@ -399,94 +399,94 @@ addUsbConfig ()
     cp -r "$template" "$tempConfigDir"
     
     local udevRules="$tempConfigDir/udevRules"
-	local descriptionFile="$tempConfigDir/description"
+    local descriptionFile="$tempConfigDir/description"
 
-	sed -i -e s/DEVICE_PH/"$port"/ "$udevRules"
-	sed -i -e s/DEVICE_PH/"$port"/ "$descriptionFile"
+    sed -i -e s/DEVICE_PH/"$port"/ "$udevRules"
+    sed -i -e s/DEVICE_PH/"$port"/ "$descriptionFile"
 
-	if $isCustom ; then
-		sed -i -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
-		sed -i -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
-		sed -i -e s/MODEL_PH/"$deviceModelId"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
-		sed -i -e s/MODEL_PH/"$deviceModelId"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
-	fi
-	if $isSlcan ; then
-		sed -i -e s/PROFILE_PH/"$profile"/ "$udevRules"
-		sed -i -e s/PROFILE_PH/"$profile"/ "$descriptionFile"
-	fi
-	if $isSlcan && $isCustom ; then
-		sed -i -e s/SLCAN_OPTIONS_PH/"$slcandOptions"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
-		sed -i -e s/SLCAN_OPTIONS_PH/"$slcandOptions"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
-	fi
+    if $isCustom ; then
+        sed -i -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
+        sed -i -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
+        sed -i -e s/MODEL_PH/"$deviceModelId"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
+        sed -i -e s/MODEL_PH/"$deviceModelId"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
+    fi
+    if $isSlcan ; then
+        sed -i -e s/PROFILE_PH/"$profile"/ "$udevRules"
+        sed -i -e s/PROFILE_PH/"$profile"/ "$descriptionFile"
+    fi
+    if $isSlcan && $isCustom ; then
+        sed -i -e s/SLCAN_OPTIONS_PH/"$slcandOptions"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
+        sed -i -e s/SLCAN_OPTIONS_PH/"$slcandOptions"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
+    fi
 
-	# prompt for port name
-	if $supportPortName ; then
-		/bin/echo -n "enter optional name for $port (cr for none): "
-		read portName
-	else
-		portName=""
-	fi
-	if [ ! -z "$portName" ]; then
-		portName+=" ($port)"
-		sed -i -e s/NAME_PH/"$portName"/ "$udevRules"
-		sed -i -e s/NAME_PH/"$portName"/ "$descriptionFile"
-	else
-		sed -i -e '/NAME_PH/ d' "$udevRules"
-		sed -i -e 's/ NAME_PH//' "$descriptionFile"
-	fi
+    # prompt for port name
+    if $supportPortName ; then
+        /bin/echo -n "enter optional name for $port (cr for none): "
+        read portName
+    else
+        portName=""
+    fi
+    if [ ! -z "$portName" ]; then
+        portName+=" ($port)"
+        sed -i -e s/NAME_PH/"$portName"/ "$udevRules"
+        sed -i -e s/NAME_PH/"$portName"/ "$descriptionFile"
+    else
+        sed -i -e '/NAME_PH/ d' "$udevRules"
+        sed -i -e 's/ NAME_PH//' "$descriptionFile"
+    fi
 
-	# serial number in udev rules - optionally needs filling in
-	if [ $(grep -c 'SERIAL_PH' "$udevRules") != 0 ]; then
-		serialNumber=""
-		if $isCustom ; then
-			if [ ! -z "$deviceSerialNumber" ]; then
-				echo
-				yesNoPrompt "Use serial number supplied above (y/n)?: "
-				if $yesResponse ; then
-					serialNumber="$deviceSerialNumber"
-				fi
-			fi
-		else
-			# show serial numbers for all matching devices reported by dmesg so user can choose the correct one
-			modelId=$(sed -n -e '/ACTION/,/ACTION/p' "$udevRules"\
-						| grep 'ID_MODEL_ID' | awk '-F\"' '{print $2}')
-			if [ ! -z "$modelId" ]; then
-				dmesg > "$scriptDir/dmesgTmp"
-				devices=($(grep $modelId "$scriptDir/dmesgTmp" | awk '-F[\]:]' '{print $2}'))
-				count=${#devices[@]}
-				for ((i = 0; i < count; i += 2 )) ; do
-					dmesgInfo=$(grep "${devices[i]} ${devices[i + 1]}" "$scriptDir/dmesgTmp"  | grep "SerialNumber:")
-					info=$(echo $dmesgInfo | awk '{print $3 " " $4 " " $5 " " $6}')
-					if [ ! -z "$info" ] ; then
-						echo found this in system logs: $info
-						echo
-						yesNoPrompt "Use that serial number (y/n)?: "
-						if $yesResponse ; then
-							serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
-							break
-						fi
-					fi
-				done
-				rm -f "$scriptDir/dmesgTmp"
-			fi
-		fi
-		# prompt for serial number
-		if [ -z "$serialNumber" ]; then
-			/bin/echo -n "enter serial number manually (cr for none): "
-			read serialNumber
-		fi
-		if [ ! -z "$serialNumber" ] || [ "$serialNumber" != "" ]; then
-			logMessage "adding serial number $serialNumber to $port udev rules"
-			sed -i  -e s/SERIAL_PH/"$serialNumber"/ "$udevRules"
-			sed -i  -e s/SERIAL_PH/"$serialNumber"/ "$descriptionFile"
-		else
-			sed -i -e '/SERIAL_PH/ d' "$udevRules"
-			sed -i -e 's/ SERIAL_PH//' "$descriptionFile"
-		fi
-	fi
+    # serial number in udev rules - optionally needs filling in
+    if [ $(grep -c 'SERIAL_PH' "$udevRules") != 0 ]; then
+        serialNumber=""
+        if $isCustom ; then
+            if [ ! -z "$deviceSerialNumber" ]; then
+                echo
+                yesNoPrompt "Use serial number supplied above (y/n)?: "
+                if $yesResponse ; then
+                    serialNumber="$deviceSerialNumber"
+                fi
+            fi
+        else
+            # show serial numbers for all matching devices reported by dmesg so user can choose the correct one
+            modelId=$(sed -n -e '/ACTION/,/ACTION/p' "$udevRules"\
+                        | grep 'ID_MODEL_ID' | awk '-F\"' '{print $2}')
+            if [ ! -z "$modelId" ]; then
+                dmesg > "$scriptDir/dmesgTmp"
+                devices=($(grep $modelId "$scriptDir/dmesgTmp" | awk '-F[\]:]' '{print $2}'))
+                count=${#devices[@]}
+                for ((i = 0; i < count; i += 2 )) ; do
+                    dmesgInfo=$(grep "${devices[i]} ${devices[i + 1]}" "$scriptDir/dmesgTmp"  | grep "SerialNumber:")
+                    info=$(echo $dmesgInfo | awk '{print $3 " " $4 " " $5 " " $6}')
+                    if [ ! -z "$info" ] ; then
+                        echo found this in system logs: $info
+                        echo
+                        yesNoPrompt "Use that serial number (y/n)?: "
+                        if $yesResponse ; then
+                            serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
+                            break
+                        fi
+                    fi
+                done
+                rm -f "$scriptDir/dmesgTmp"
+            fi
+        fi
+        # prompt for serial number
+        if [ -z "$serialNumber" ]; then
+            /bin/echo -n "enter serial number manually (cr for none): "
+            read serialNumber
+        fi
+        if [ ! -z "$serialNumber" ] || [ "$serialNumber" != "" ]; then
+            logMessage "adding serial number $serialNumber to $port udev rules"
+            sed -i  -e s/SERIAL_PH/"$serialNumber"/ "$udevRules"
+            sed -i  -e s/SERIAL_PH/"$serialNumber"/ "$descriptionFile"
+        else
+            sed -i -e '/SERIAL_PH/ d' "$udevRules"
+            sed -i -e 's/ SERIAL_PH//' "$descriptionFile"
+        fi
+    fi
 
 
-	# move modified config into position
+    # move modified config into position
     local portConfigDir="$configsDir/$port.config"
     rm -rf "$portConfigDir"
     mv "$tempConfigDir" "$portConfigDir"
@@ -501,201 +501,201 @@ addUsbConfig ()
 
 updateCanFiles ()
 {
-	local portNumber
-	local port
-	local uninstallAllPorts
-	local portDefined
-	local file
-	local files
+    local portNumber
+    local port
+    local uninstallAllPorts
+    local portDefined
+    local file
+    local files
 
-	# remove old style udev rules and associated scripts
-	files=$(ls -d "$udevRulesDir/"can*.rules 2> /dev/null)
-	if [ ! -z "$files" ]; then
-		logMessage "removing udev rules from old version of VeCanSetup"
-		for file in $files ; do
-			rm -r $file
-		done
-	fi
-	if [ -d "$binDir" ]; then
-		files=$(ls "$binDir/"can*add.sh 2> /dev/null)
-		files+=" "
-		files+=$(ls "$binDir/"can*remove.sh 2> /dev/null)
-		if [ ! -z "$files" ]; then
-			logMessage "removing scripts from old version of VeCanSetup"
-			for file in $files ; do
-				rm $file
-			done
-		fi
-	fi
+    # remove old style udev rules and associated scripts
+    files=$(ls -d "$udevRulesDir/"can*.rules 2> /dev/null)
+    if [ ! -z "$files" ]; then
+        logMessage "removing udev rules from old version of VeCanSetup"
+        for file in $files ; do
+            rm -r $file
+        done
+    fi
+    if [ -d "$binDir" ]; then
+        files=$(ls "$binDir/"can*add.sh 2> /dev/null)
+        files+=" "
+        files+=$(ls "$binDir/"can*remove.sh 2> /dev/null)
+        if [ ! -z "$files" ]; then
+            logMessage "removing scripts from old version of VeCanSetup"
+            for file in $files ; do
+                rm $file
+            done
+        fi
+    fi
 
     if [ $scriptAction == 'UNINSTALL' ]; then
-		uninstallAllPorts=true
+        uninstallAllPorts=true
 
-		rm -f "$binDir/startGsUsbCan.sh"
-		rm -f "$binDir/startSlcand.sh"
-		rm -f "$binDir/stopSlcand.sh"
-		rm -f "$binDir/startSpiCan.sh"
-		
-		rm -f "$veUdevRulesFile"
+        rm -f "$binDir/startGsUsbCan.sh"
+        rm -f "$binDir/startSlcand.sh"
+        rm -f "$binDir/stopSlcand.sh"
+        rm -f "$binDir/startSpiCan.sh"
+        
+        rm -f "$veUdevRulesFile"
 
-	# installing
+    # installing
     else
-		uninstallAllPorts=false
-		# install common scripts
+        uninstallAllPorts=false
+        # install common scripts
         if [ ! -e $binDir ]; then
             mkdir $binDir
         fi
-		if [ ! -f "$scriptDir/scripts/startGsUsbCan.sh" ]; then
-			logMessage "installing common scripts"
-		fi
-		cp "$scriptDir/scripts/startGsUsbCan.sh" $binDir
-		cp "$scriptDir/scripts/startSlcand.sh" $binDir
-		cp "$scriptDir/scripts/stopSlcand.sh" $binDir
-		cp "$scriptDir/scripts/startSpiCan.sh" $binDir
+        if [ ! -f "$scriptDir/scripts/startGsUsbCan.sh" ]; then
+            logMessage "installing common scripts"
+        fi
+        cp "$scriptDir/scripts/startGsUsbCan.sh" $binDir
+        cp "$scriptDir/scripts/startSlcand.sh" $binDir
+        cp "$scriptDir/scripts/stopSlcand.sh" $binDir
+        cp "$scriptDir/scripts/startSpiCan.sh" $binDir
 
-		# tell the start scripts this system is using new udev rules
-		touch "/etc/venus/newUdevRules"
+        # tell the start scripts this system is using new udev rules
+        touch "/etc/venus/newUdevRules"
     fi
 
-	# create new empty temp ports file to add ports to (if any)
-	echo -n "" > "$scriptDir/tempPorts"
-	# add built-in ports to temp ports file
-	for (( portNumber = 0 ; portNumber < builtInPorts; portNumber++ )) ; do
-		echo "$can$portNumber" >> "$scriptDir/tempPorts"
-	done
+    # create new empty temp ports file to add ports to (if any)
+    echo -n "" > "$scriptDir/tempPorts"
+    # add built-in ports to temp ports file
+    for (( portNumber = 0 ; portNumber < builtInPorts; portNumber++ )) ; do
+        echo "$can$portNumber" >> "$scriptDir/tempPorts"
+    done
 
-	# create new empty udev rules file - rules will be added below
-	echo -n "" > "$scriptDir/udevRules"
+    # create new empty udev rules file - rules will be added below
+    echo -n "" > "$scriptDir/udevRules"
 
-	local configs=$(ls -d "$configsDir/$port"*.config)
-	local config
-	for config in $configs ; do
-		port=$(basename	"$config")
+    local configs=$(ls -d "$configsDir/$port"*.config)
+    local config
+    for config in $configs ; do
+        port=$(basename    "$config")
 
         # treat uninstall as if there is nothing specified for the port
         if $uninstallAllPorts ; then
-			portDefined=false
-		# config must be new one (isNewConfig file exists) or it will be ignored
+            portDefined=false
+        # config must be new one (isNewConfig file exists) or it will be ignored
         elif [ -f "$config/isNewConfig" ]; then
-			portDefined=true
-		else
-			logMessage "$port config is old format -- can't install" 
-			portDefined=false
+            portDefined=true
+        else
+            logMessage "$port config is old format -- can't install" 
+            portDefined=false
         fi
 
-		# add configured ports to port list
-		local portName=$(echo "$port" | sed -e 's/.config//')
-		if $portDefined && [ "$port" != "hat.config" ]; then
-			echo "$portName" >> "$scriptDir/tempPorts"
+        # add configured ports to port list
+        local portName=$(echo "$port" | sed -e 's/.config//')
+        if $portDefined && [ "$port" != "hat.config" ]; then
+            echo "$portName" >> "$scriptDir/tempPorts"
         fi
 
         if $portDefined && [ -f "$config/udevRules" ]; then
-			logMessage "adding udev rules for $portName"
+            logMessage "adding udev rules for $portName"
             cat "$config/udevRules" >> "$scriptDir/udevRules"
         fi
 
-		# add service if port is active and if service does not already exist
-		# remove service if port is not active
-		# for v2.90~18 and newer, OS manages services so don't add them here
-		if $installServices ; then
-			for service in $services; do
-				destDir="$serviceDir/$service.$port"
-				if $portDefined ; then
-					if [ ! -d "$destDir" ]; then
-						serviceTemplate="$venusDir/service-templates/$service"
-						tempServiceDir="$scriptDir/tempService.$port"
-						# template exists (v2.80 and beyond), take service source from there
-						if [ -d "$serviceTemplate" ]; then
-							srcDir="$venusDir/service-templates/$service"
-						# otherwise assume service template is in the service's main directory
-						else
-							srcDir="$venusDir/$service/service"
-						fi
-						if [ -d "$srcDir" ] ; then
-							logMessage "creating $service.$port"
-							cp -r "$srcDir" "$tempServiceDir"
-							sed -i -e s/DEV/$port/ "$tempServiceDir/run"
-							sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
-							rm -rf  "$serviceDir/$service.$port"
-							mv "$tempServiceDir" "$destDir"
-							filesUpdated=true
-						fi
-					fi
-				elif [ -d "$destDir" ] ; then
-					logMessage "removing $service.$port"
-					svc -d "$destDir"
-					filesUpdated=true
-					rm -rf "$destDir"
-				fi
-			done
-		fi
+        # add service if port is active and if service does not already exist
+        # remove service if port is not active
+        # for v2.90~18 and newer, OS manages services so don't add them here
+        if $installServices ; then
+            for service in $services; do
+                destDir="$serviceDir/$service.$port"
+                if $portDefined ; then
+                    if [ ! -d "$destDir" ]; then
+                        serviceTemplate="$venusDir/service-templates/$service"
+                        tempServiceDir="$scriptDir/tempService.$port"
+                        # template exists (v2.80 and beyond), take service source from there
+                        if [ -d "$serviceTemplate" ]; then
+                            srcDir="$venusDir/service-templates/$service"
+                        # otherwise assume service template is in the service's main directory
+                        else
+                            srcDir="$venusDir/$service/service"
+                        fi
+                        if [ -d "$srcDir" ] ; then
+                            logMessage "creating $service.$port"
+                            cp -r "$srcDir" "$tempServiceDir"
+                            sed -i -e s/DEV/$port/ "$tempServiceDir/run"
+                            sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
+                            rm -rf  "$serviceDir/$service.$port"
+                            mv "$tempServiceDir" "$destDir"
+                            filesUpdated=true
+                        fi
+                    fi
+                elif [ -d "$destDir" ] ; then
+                    logMessage "removing $service.$port"
+                    svc -d "$destDir"
+                    filesUpdated=true
+                    rm -rf "$destDir"
+                fi
+            done
+        fi
     done
 
-	# if any ports have udev rules, write the combined rules file to /etc/udev/rules.d
-	if [ -s "$scriptDir/udevRules" ]; then
-		logMessage "updating VeCanSetup udev rules"
-		updateActiveFile "$scriptDir/udevRules" "$veUdevRulesFile"
-		rebootNeeded=true
-	elif [ -f "$veUdevRulesFile" ]; then
-		logMessage "removing VeCanSetup udev rules"
-		restoreActiveFile "$veUdevRulesFile"
-		rebootNeeded=true
-	fi
-	rm -f "$scriptDir/udevRules"
+    # if any ports have udev rules, write the combined rules file to /etc/udev/rules.d
+    if [ -s "$scriptDir/udevRules" ]; then
+        logMessage "updating VeCanSetup udev rules"
+        updateActiveFile "$scriptDir/udevRules" "$veUdevRulesFile"
+        rebootNeeded=true
+    elif [ -f "$veUdevRulesFile" ]; then
+        logMessage "removing VeCanSetup udev rules"
+        restoreActiveFile "$veUdevRulesFile"
+        rebootNeeded=true
+    fi
+    rm -f "$scriptDir/udevRules"
 
-	# v2.90~18 and newer don't use the canbus_ports file !
+    # v2.90~18 and newer don't use the canbus_ports file !
     if $manageCanbusPortsFile ; then
-		if $uninstallAllPorts ; then
-			restoreActiveFile "$veCanPortsFile"
-		else
-			logMessage "updating canbus_ports file"
-			updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
-		fi
-		rebootNeeded=true
-		rm -f "$scriptDir/tempPorts"
-	fi
+        if $uninstallAllPorts ; then
+            restoreActiveFile "$veCanPortsFile"
+        else
+            logMessage "updating canbus_ports file"
+            updateActiveFile "$scriptDir/tempPorts" "$veCanPortsFile" 
+        fi
+        rebootNeeded=true
+        rm -f "$scriptDir/tempPorts"
+    fi
 
-	# add/remove overlay to/from config.txt - if adding, need to remove a previous one first
-	if $hatsOk ; then
-		config="$configsDir/hat.config"
-		local hatDefined
-		if [ -f "$config/overlay" ]; then
-			hatDefined=true
-		else
-			hatDefined=false
-		fi
-		configFile="/u-boot/config.txt"
-		if [ $(grep -c "#### begin CAN overlay" "$configFile") != 0 ]; then
-			removeOverlay=true
-			oldOverlayText=$(sed -n -e "/#### begin CAN overlay/,/#### end CAN overlay/p" "$configFile")
-		else
-			oldOverlayText=""
-			removeOverlay=false
-		fi
-		if $hatDefined && [ -f "$config/overlay" ] && [ ! -f "$config/MANUAL_OVERLAY" ] ; then
-			installOverlay=true
-			newOverlayText=$(grep dtoverlay "$config/overlay")
-		else
-			installOverlay=false
-			newOverlayText=""
-		fi
+    # add/remove overlay to/from config.txt - if adding, need to remove a previous one first
+    if $hatsOk ; then
+        config="$configsDir/hat.config"
+        local hatDefined
+        if [ -f "$config/overlay" ]; then
+            hatDefined=true
+        else
+            hatDefined=false
+        fi
+        configFile="/u-boot/config.txt"
+        if [ $(grep -c "#### begin CAN overlay" "$configFile") != 0 ]; then
+            removeOverlay=true
+            oldOverlayText=$(sed -n -e "/#### begin CAN overlay/,/#### end CAN overlay/p" "$configFile")
+        else
+            oldOverlayText=""
+            removeOverlay=false
+        fi
+        if $hatDefined && [ -f "$config/overlay" ] && [ ! -f "$config/MANUAL_OVERLAY" ] ; then
+            installOverlay=true
+            newOverlayText=$(grep dtoverlay "$config/overlay")
+        else
+            installOverlay=false
+            newOverlayText=""
+        fi
 
-		# correct overlay already installed - don't make changes
-		if $removeOverlay && $installOverlay && [ "$oldOverlayText" == "$newOverlayText" ]; then
-			removeOverlay=false
-			installOverlay=false
-		fi
-		if $removeOverlay ; then
-			logMessage "removing old CAN hat overlay from config.txt"
-			sed -i -e "/#### begin CAN overlay/,/#### end CAN overlay/d" "$configFile"
-			rebootNeeded=true
-		fi
-		if $installOverlay ; then
-			logMessage "adding new CAN hat overlay to config.txt"
-			cat "$config/overlay" >> $configFile
-			rebootNeeded=true
-		fi
-	fi
+        # correct overlay already installed - don't make changes
+        if $removeOverlay && $installOverlay && [ "$oldOverlayText" == "$newOverlayText" ]; then
+            removeOverlay=false
+            installOverlay=false
+        fi
+        if $removeOverlay ; then
+            logMessage "removing old CAN hat overlay from config.txt"
+            sed -i -e "/#### begin CAN overlay/,/#### end CAN overlay/d" "$configFile"
+            rebootNeeded=true
+        fi
+        if $installOverlay ; then
+            logMessage "adding new CAN hat overlay to config.txt"
+            cat "$config/overlay" >> $configFile
+            rebootNeeded=true
+        fi
+    fi
 }
 
 
@@ -704,213 +704,213 @@ updateCanFiles ()
 
 # adding a hat configuration requires available can ports (can0 or can1 prior to v2.90)
 # if available ports are not available for a dual-channel hat, the user may choose to
-#	install only the first channel (space permitting)
+#    install only the first channel (space permitting)
 #
 # Hat interfaces use GPIOs which could conflict with other uses.
 # If other uses are detected, this code does not permit adding the interface!
 
 addHatConfig ()
 {
-	local templates
-	local template
-	local descriptionFile
-	local description=""
-	local count=0
-	local firstHatPort
-	local secondHatPort
-	local isDualChannel
-	local hatTemplates
-	local listNumber
+    local templates
+    local template
+    local descriptionFile
+    local description=""
+    local count=0
+    local firstHatPort
+    local secondHatPort
+    local isDualChannel
+    local hatTemplates
+    local listNumber
 
-	#display template choices
-	templates=$(ls -d "$hatTemplatesDir/"* )
-	for template in $templates ; do
-		descriptionFile="$template/description"
-		if [ -f "$descriptionFile" ]; then
-			description=$(head -n 1 "$descriptionFile")
-		else
-			description="no description - directory name: "$(basename "$template")
-		fi
-		(( listNumber = $count + 1 ))
-		echo "$listNumber ) $description"
-		hatTemplates[$count]=$template
-		((count += 1))
-	done
+    #display template choices
+    templates=$(ls -d "$hatTemplatesDir/"* )
+    for template in $templates ; do
+        descriptionFile="$template/description"
+        if [ -f "$descriptionFile" ]; then
+            description=$(head -n 1 "$descriptionFile")
+        else
+            description="no description - directory name: "$(basename "$template")
+        fi
+        (( listNumber = $count + 1 ))
+        echo "$listNumber ) $description"
+        hatTemplates[$count]=$template
+        ((count += 1))
+    done
 
-	echo
-	while true ; do
-		read -p "Choose the Hat configuration from the list above (by number) (cr to skip): " response
+    echo
+    while true ; do
+        read -p "Choose the Hat configuration from the list above (by number) (cr to skip): " response
 
-		# response must be a number and in range of the list above
-		if [ -z $response ]; then
-			echo "no hat added"
-			return
-		elif [[ $response =~ ^[0-9]+$ ]] && (( $response >= 1)) && (( $response <= $count )) ; then
-			template=${hatTemplates[ (($response - 1)) ]}
+        # response must be a number and in range of the list above
+        if [ -z $response ]; then
+            echo "no hat added"
+            return
+        elif [[ $response =~ ^[0-9]+$ ]] && (( $response >= 1)) && (( $response <= $count )) ; then
+            template=${hatTemplates[ (($response - 1)) ]}
 
-			checkForGpioConflicts "$template"
-			if (( $? == 1 )); then
-				echo "CAUTION"
-				echo "  installation of this device could cause Venus OS to become unresponsive"
-				echo "  you must manually resolve GPIO conflicts before adding this device will be allowed"
-				echo "  if you are using RpiGpioSetup, you can install an alternate GPIO list"
-				echo "   or create a custom list to avoid GPIO conflicts with the SPI bus used on this Hat"
-			else
-				break
-			fi
-		else
-			echo "invalid value, try again"
-		fi
-	done
+            checkForGpioConflicts "$template"
+            if (( $? == 1 )); then
+                echo "CAUTION"
+                echo "  installation of this device could cause Venus OS to become unresponsive"
+                echo "  you must manually resolve GPIO conflicts before adding this device will be allowed"
+                echo "  if you are using RpiGpioSetup, you can install an alternate GPIO list"
+                echo "   or create a custom list to avoid GPIO conflicts with the SPI bus used on this Hat"
+            else
+                break
+            fi
+        else
+            echo "invalid value, try again"
+        fi
+    done
 
-	descriptionFile="$template/description"
-	if [ -f "$descriptionFile" ]; then
-		description=$(head -n 1 "$descriptionFile")
-	else
-		description="no description - directory name: $basename $template"
-	fi
-	echo "selected interface: $description"
+    descriptionFile="$template/description"
+    if [ -f "$descriptionFile" ]; then
+        description=$(head -n 1 "$descriptionFile")
+    else
+        description="no description - directory name: $basename $template"
+    fi
+    echo "selected interface: $description"
 
-	if [ -f "$template/isDualChannel" ]; then
-		isDualChannel=true
-	else
-		isDualChannel=false
-	fi
+    if [ -f "$template/isDualChannel" ]; then
+        isDualChannel=true
+    else
+        isDualChannel=false
+    fi
 
-	# for limited ports assign based on other port assigments
-	if $limitedPorts ; then
-		local can0inUse
-		local can1inUse
-		firstHatPort=-1
-		secondHatPort=-1
-		if [ -e "$configsDir/can0.config" ]; then
-			can0inUse=true
-		else
-			can0inUse=false
-		fi
-		if [ -e "$configsDir/can1.config" ]; then
-			can1inUse=true
-		else
-			can1inUse=false
-		fi
+    # for limited ports assign based on other port assigments
+    if $limitedPorts ; then
+        local can0inUse
+        local can1inUse
+        firstHatPort=-1
+        secondHatPort=-1
+        if [ -e "$configsDir/can0.config" ]; then
+            can0inUse=true
+        else
+            can0inUse=false
+        fi
+        if [ -e "$configsDir/can1.config" ]; then
+            can1inUse=true
+        else
+            can1inUse=false
+        fi
 
 
-		if ! $can0inUse ; then
-			firstHatPort=0
-			if ! $can1inUse ; then
-				secondHatPort=-1
-			fi
-		elif $can1inUse ; then
-			firstHatPort=1
-		fi
-	# for unlimited ports, assign dedicated hat ports
-	else
-		firstHatPort=8
-		secondHatPort=9
-	fi
-	local firstDevice="can$firstHatPort"
-	local secondDevice="can$secondHatPort"
+        if ! $can0inUse ; then
+            firstHatPort=0
+            if ! $can1inUse ; then
+                secondHatPort=-1
+            fi
+        elif $can1inUse ; then
+            firstHatPort=1
+        fi
+    # for unlimited ports, assign dedicated hat ports
+    else
+        firstHatPort=8
+        secondHatPort=9
+    fi
+    local firstDevice="can$firstHatPort"
+    local secondDevice="can$secondHatPort"
 
-	echo
-	if $isDualChannel ; then
-		if (( $secondHatPort == -1 )); then
-			echo "WARNING: only the first port of this dual-channel interface can be activated"
-			echo
-		else
-			yesNoPrompt "Install both channels of this interface (y/n)?: "
-			if ! $yesResponse ; then
-				secondHatPort=-1
-			fi
-		fi
-	fi
-	if $supportPortName ; then
-		if $isDualChannel ; then
-			echo
-			read -p "Enter optional name for first port on this Hat (cr for none): " firstPortName
-			if (($secondHatPort >= 0)); then
-				read -p "Enter optional name for second port on this Hat (cr for none): " secondPortName
-			fi
-		else
-			read -p "Enter optional name for the CANbus port on this Hat (cr for none): " firstPortName
-		fi
-	else
-		firstPortName=""
-		secondPortName=""
-	fi
+    echo
+    if $isDualChannel ; then
+        if (( $secondHatPort == -1 )); then
+            echo "WARNING: only the first port of this dual-channel interface can be activated"
+            echo
+        else
+            yesNoPrompt "Install both channels of this interface (y/n)?: "
+            if ! $yesResponse ; then
+                secondHatPort=-1
+            fi
+        fi
+    fi
+    if $supportPortName ; then
+        if $isDualChannel ; then
+            echo
+            read -p "Enter optional name for first port on this Hat (cr for none): " firstPortName
+            if (($secondHatPort >= 0)); then
+                read -p "Enter optional name for second port on this Hat (cr for none): " secondPortName
+            fi
+        else
+            read -p "Enter optional name for the CANbus port on this Hat (cr for none): " firstPortName
+        fi
+    else
+        firstPortName=""
+        secondPortName=""
+    fi
 
-	if [ ! -z "$firstPortName" ]; then
-		firstPortName+=" ($firstDevice)"
-	fi
-	if [ ! -z "$secondPortName" ]; then
-		secondPortName+=" ($secondDevice)"
-	fi
+    if [ ! -z "$firstPortName" ]; then
+        firstPortName+=" ($firstDevice)"
+    fi
+    if [ ! -z "$secondPortName" ]; then
+        secondPortName+=" ($secondDevice)"
+    fi
 
-	# report selections and request confirmation
-	spis=($(grep -e 'KERNELS' "$template/udevRules" | sed -e 's/"//g' -e 's/,.*$//g' | awk -v FS='==' '{print $2}'))
-	
-	echo "$description"
-	if [ ! -z "$firstPortName" ]; then
-		echo "  $firstPortName  ${spis[0]}"
-	else
-		echo "  $firstDevice  ${spis[0]}"
-	fi
-	if $isDualChannel ; then
-		if (( $secondHatPort == -1 )); then
-			echo "  second port not configured"
-		elif [ ! -z "$secondPortName" ]; then
-			echo "  $secondPortName  ${spis[1]}"
-		else
-			echo "  $secondDevice  ${spis[1]}"
-		fi
-	fi
-	echo
-	yesNoPrompt "Install interface as shown above (y/n)?: "
-	if $yesResponse ; then
-		echo "adding CANbus hat"
-	else
-		echo "CANbus hat NOT ADDED"
-		return
-	fi
-	
+    # report selections and request confirmation
+    spis=($(grep -e 'KERNELS' "$template/udevRules" | sed -e 's/"//g' -e 's/,.*$//g' | awk -v FS='==' '{print $2}'))
+    
+    echo "$description"
+    if [ ! -z "$firstPortName" ]; then
+        echo "  $firstPortName  ${spis[0]}"
+    else
+        echo "  $firstDevice  ${spis[0]}"
+    fi
+    if $isDualChannel ; then
+        if (( $secondHatPort == -1 )); then
+            echo "  second port not configured"
+        elif [ ! -z "$secondPortName" ]; then
+            echo "  $secondPortName  ${spis[1]}"
+        else
+            echo "  $secondDevice  ${spis[1]}"
+        fi
+    fi
+    echo
+    yesNoPrompt "Install interface as shown above (y/n)?: "
+    if $yesResponse ; then
+        echo "adding CANbus hat"
+    else
+        echo "CANbus hat NOT ADDED"
+        return
+    fi
+    
     # update/create configuration - use temp file until all operations are complete
     local tempConfigDir="$configsDir/temp.config"
-	cp -r $template "$hatConfig"
+    cp -r $template "$hatConfig"
     rm -rf "$tempConfigDir"
     cp -r "$template" "$tempConfigDir"
 
-	local udevFile="$tempConfigDir/udevRules"
-	local descriptionFile="$tempConfigDir/description"
-	local overlayFile="$tempConfigDir/overlay"
-	local device="can$firstHatPort"
+    local udevFile="$tempConfigDir/udevRules"
+    local descriptionFile="$tempConfigDir/description"
+    local overlayFile="$tempConfigDir/overlay"
+    local device="can$firstHatPort"
 
-	sed -i -e s/DEVICE1_PH/"$device"/ "$udevFile"
-	sed -i -e s/DEVICE1_PH/"$device"/ "$descriptionFile"
-	if $supportPortName && [ ! -z "$firstPortName" ]; then
-		sed -i -e s/NAME1_PH/"$firstPortName"/ "$udevFile"
-		sed -i -e s/NAME1_PH/"$firstPortName"/ "$descriptionFile"
-	else
-		sed -i -e '/NAME1_PH/ d' "$udevFile"
-		sed -i -e 's/ NAME1_PH//' "$descriptionFile"
-	fi
-	if $isDualChannel ; then
-		if (( $secondHatPort >= 0 )); then
-			local device="can$secondHatPort"
-			sed -i -e s/DEVICE2_PH/"$device"/ "$udevFile"
-			sed -i -e s/DEVICE2_PH/"$device"/ "$descriptionFile"
-			if $supportPortName && [ ! -z "$secondPortName" ]; then
-				sed -i -e s/NAME2_PH/"$secondPortName"/ "$udevFile"
-				sed -i -e s/NAME2_PH/"$firstPortName"/ "$descriptionFile"
-			else
-				sed -i -e '/NAME2_PH/ d' "$udevFile"
-				sed -i -e 's/ NAME2_PH//' "$descriptionFile"
-			fi
-		else
-			sed -i -e '/can1/ d' "$overlayFile"
-			sed -1 -e 's/channel 2: .*/channel 2 not configured/' "$descriptionFile"
-		fi
-	fi
+    sed -i -e s/DEVICE1_PH/"$device"/ "$udevFile"
+    sed -i -e s/DEVICE1_PH/"$device"/ "$descriptionFile"
+    if $supportPortName && [ ! -z "$firstPortName" ]; then
+        sed -i -e s/NAME1_PH/"$firstPortName"/ "$udevFile"
+        sed -i -e s/NAME1_PH/"$firstPortName"/ "$descriptionFile"
+    else
+        sed -i -e '/NAME1_PH/ d' "$udevFile"
+        sed -i -e 's/ NAME1_PH//' "$descriptionFile"
+    fi
+    if $isDualChannel ; then
+        if (( $secondHatPort >= 0 )); then
+            local device="can$secondHatPort"
+            sed -i -e s/DEVICE2_PH/"$device"/ "$udevFile"
+            sed -i -e s/DEVICE2_PH/"$device"/ "$descriptionFile"
+            if $supportPortName && [ ! -z "$secondPortName" ]; then
+                sed -i -e s/NAME2_PH/"$secondPortName"/ "$udevFile"
+                sed -i -e s/NAME2_PH/"$firstPortName"/ "$descriptionFile"
+            else
+                sed -i -e '/NAME2_PH/ d' "$udevFile"
+                sed -i -e 's/ NAME2_PH//' "$descriptionFile"
+            fi
+        else
+            sed -i -e '/can1/ d' "$overlayFile"
+            sed -1 -e 's/channel 2: .*/channel 2 not configured/' "$descriptionFile"
+        fi
+    fi
 
-	# move modified config into position
+    # move modified config into position
     rm -rf "$hatConfig"
     mv "$tempConfigDir" "$hatConfig"
     logMessage "Hat configuration updated"
@@ -920,51 +920,51 @@ addHatConfig ()
 # display all defined port configurations
 displayConfigurations ()
 {
-	local configs
-	local config
-	local descriptionFile
-	local description=""
-	local warningText=""
-	local count=0
-	echo
-	if [ ! -d $configsDir ]; then
-		echo "no CANbus definitions found"
-		echo
-		return
-	fi
-	configs=$(ls -d "$configsDir/"*config 2> /dev/null)
-	if [ -z "$configs" ]; then
-		echo "no CANbus definitions found"
-		return
-	fi
-	echo "CANbus interface definitions:"
-	for config in $configs ; do
-		local port=$(basename $config | sed -e 's/.config//')
-		if ! $hatsOk && [[ "$port" == "hat" ]]; then
-			continue
-		elif [[ "$port" == "can"* ]]; then
-			local number=$(echo $port | sed -n -e 's/can//p')
-			if (( $number < $firstConfigurablePort )); then
-				continue
-			fi
-		fi
+    local configs
+    local config
+    local descriptionFile
+    local description=""
+    local warningText=""
+    local count=0
+    echo
+    if [ ! -d $configsDir ]; then
+        echo "no CANbus definitions found"
+        echo
+        return
+    fi
+    configs=$(ls -d "$configsDir/"*config 2> /dev/null)
+    if [ -z "$configs" ]; then
+        echo "no CANbus definitions found"
+        return
+    fi
+    echo "CANbus interface definitions:"
+    for config in $configs ; do
+        local port=$(basename $config | sed -e 's/.config//')
+        if ! $hatsOk && [[ "$port" == "hat" ]]; then
+            continue
+        elif [[ "$port" == "can"* ]]; then
+            local number=$(echo $port | sed -n -e 's/can//p')
+            if (( $number < $firstConfigurablePort )); then
+                continue
+            fi
+        fi
 
-		((count += 1))
-		descriptionFile="$config/description"
-		description="interface: $port ) "
-		if [ ! -f "$descriptionFile" ]; then
-			description+="ERROR: no description file"
-			echo $description
-		elif [ ! -f "$config/isNewConfig" ]; then
-			description+=$(head -n 1 "$descriptionFile")
-			description+=" -- WARNING: old format - delete and add agin"
-			echo $description
-		elif [ -f "$descriptionFile" ]; then
-			/bin/echo -n "$description"
-			cat "$descriptionFile"
-		fi
-		echo
-	done
+        ((count += 1))
+        descriptionFile="$config/description"
+        description="interface: $port ) "
+        if [ ! -f "$descriptionFile" ]; then
+            description+="ERROR: no description file"
+            echo $description
+        elif [ ! -f "$config/isNewConfig" ]; then
+            description+=$(head -n 1 "$descriptionFile")
+            description+=" -- WARNING: old format - delete and add agin"
+            echo $description
+        elif [ -f "$descriptionFile" ]; then
+            /bin/echo -n "$description"
+            cat "$descriptionFile"
+        fi
+        echo
+    done
 }
 
 
@@ -974,59 +974,59 @@ displayConfigurations ()
 
 deleteConfig ()
 {
-	local port=$1
-	local config="$configsDir/$port.config"
+    local port=$1
+    local config="$configsDir/$port.config"
 
-	echo
-	if [ -e "$config" ]; then
-		logMessage "deleting $port"
-		rm -rf  "$config"
-	else
-		echo "configuration for $port not found - nothing deleted"
-	fi
+    echo
+    if [ -e "$config" ]; then
+        logMessage "deleting $port"
+        rm -rf  "$config"
+    else
+        echo "configuration for $port not found - nothing deleted"
+    fi
 }
 
 
 # compute the number of available ports
-#	and set lags used in main code below
+#    and set lags used in main code below
 
 updatePortCounts ()
 {
-	local configs
-	local config
+    local configs
+    local config
 
-	configs=$(ls -d "$configsDir/can"*config 2> /dev/null)
-	# accumuate number of defined USB ports
-	local portCount=0
-	for config in $configs ; do
-		((portCount += 1 ))
-	done
-	usbPortCount=$portCount
+    configs=$(ls -d "$configsDir/can"*config 2> /dev/null)
+    # accumuate number of defined USB ports
+    local portCount=0
+    for config in $configs ; do
+        ((portCount += 1 ))
+    done
+    usbPortCount=$portCount
 
-	if ! $hatsOK ; then
-		addHatOk=false
-		hatDefined=false
-	elif [ -d "$hatConfig" ]; then
-		hatDefined=true
-		addHatOk=false
-	else
-		hatDefined=false
-		addHatOk=true
-	fi
-	if $limitedPorts ; then
-		# hats use same ports as USB interfaces prior to v2.90 so count them as well
-		if $hatDefined; then
-			(( portCount += $(grep -c "can" "$hatConfig/description") ))
-		fi
-		if (( $portCount < $configurablePorts)); then
-			addUsbOk=true
-		else
-			addUsbOk=false
-			addHatOk=false
-		fi
-	else
-		addUsbOk=true
-	fi
+    if ! $hatsOK ; then
+        addHatOk=false
+        hatDefined=false
+    elif [ -d "$hatConfig" ]; then
+        hatDefined=true
+        addHatOk=false
+    else
+        hatDefined=false
+        addHatOk=true
+    fi
+    if $limitedPorts ; then
+        # hats use same ports as USB interfaces prior to v2.90 so count them as well
+        if $hatDefined; then
+            (( portCount += $(grep -c "can" "$hatConfig/description") ))
+        fi
+        if (( $portCount < $configurablePorts)); then
+            addUsbOk=true
+        else
+            addUsbOk=false
+            addHatOk=false
+        fi
+    else
+        addUsbOk=true
+    fi
 }
 
 ######## script code begins here  ########
@@ -1034,217 +1034,217 @@ updatePortCounts ()
 # setup enviroment for manual ops or install
 if [ $scriptAction == 'NONE' ] || [ $scriptAction == 'INSTALL' ] ; then
 
-	if [ -f /etc/venus/machine ]; then
-		machine=$(cat /etc/venus/machine)
-		case $machine in
-			raspberrypi*)
-				builtInPorts=0
-				hatsOk=true
-				gxDevice="Raspberry PI"
-				;;
-			einstein)
-				builtInPorts=2
-				hatsOk=false
-				gxDevice="Cerbo GX"
-				;;
-			cerbosgx)
-				builtInPorts=1
-				hatsOk=false
-				gxDevice="Cerbo GX S"
-				;;
-			beaglebone)
-				builtInPorts=2
-				hatsOk=false
-				gxDevice="Venus GX"
-				;;
-			ccgx)
-				builtInPorts=1
-				hatsOk=false
-				gxDevice="CCGX"
-				;;
-			*)
-				logMessage "unsupported Venus device type $machine - exiting"
-				exit $EXIT_INCOMPATIBLE_PLATFOM
-			;;
-		esac
-	else
-		logMessage "can't determine Venus device type - exiting"
-		exit $EXIT_INCOMPATIBLE_PLATFOM
-	fi
-	# number of ports is 2 prior to v2.90~18
-	# for v2.90~18 and newer there is no limit
-	versionStringToNumber "v2.90~18"
-	if (( $venusVersionNumber < $versionNumber )); then
-		limitedPorts=true
-		if (( $builtInPorts >= 2 )) ; then
-			logMessage "can't add additional CANbus ports - exiting"
-			exit $EXIT_INCOMPATIBLE_PLATFOM
-		fi
-		firstConfigurablePort=builtInPorts
-		installServices=true
-		manageCanbusPortsFile=true
-		supportPortName=false
-		newRules=false
-		(( configurablePorts = 2 - $firstConfigurablePort ))
-	else
-		limitedPorts=false
-		firstConfigurablePort=10
-		installServices=false
-		manageCanbusPortsFile=false
-		supportPortName=true
-		newRules=true
-		configurablePorts=99999
-	fi
+    if [ -f /etc/venus/machine ]; then
+        machine=$(cat /etc/venus/machine)
+        case $machine in
+            raspberrypi*)
+                builtInPorts=0
+                hatsOk=true
+                gxDevice="Raspberry PI"
+                ;;
+            einstein)
+                builtInPorts=2
+                hatsOk=false
+                gxDevice="Cerbo GX"
+                ;;
+            cerbosgx)
+                builtInPorts=1
+                hatsOk=false
+                gxDevice="Cerbo GX S"
+                ;;
+            beaglebone)
+                builtInPorts=2
+                hatsOk=false
+                gxDevice="Venus GX"
+                ;;
+            ccgx)
+                builtInPorts=1
+                hatsOk=false
+                gxDevice="CCGX"
+                ;;
+            *)
+                logMessage "unsupported Venus device type $machine - exiting"
+                exit $EXIT_INCOMPATIBLE_PLATFOM
+            ;;
+        esac
+    else
+        logMessage "can't determine Venus device type - exiting"
+        exit $EXIT_INCOMPATIBLE_PLATFOM
+    fi
+    # number of ports is 2 prior to v2.90~18
+    # for v2.90~18 and newer there is no limit
+    versionStringToNumber "v2.90~18"
+    if (( $venusVersionNumber < $versionNumber )); then
+        limitedPorts=true
+        if (( $builtInPorts >= 2 )) ; then
+            logMessage "can't add additional CANbus ports - exiting"
+            exit $EXIT_INCOMPATIBLE_PLATFOM
+        fi
+        firstConfigurablePort=builtInPorts
+        installServices=true
+        manageCanbusPortsFile=true
+        supportPortName=false
+        newRules=false
+        (( configurablePorts = 2 - $firstConfigurablePort ))
+    else
+        limitedPorts=false
+        firstConfigurablePort=10
+        installServices=false
+        manageCanbusPortsFile=false
+        supportPortName=true
+        newRules=true
+        configurablePorts=99999
+    fi
 fi
 
 #### running manually - prompt for input
 if [ $scriptAction == 'NONE' ] ; then
-	echo
-	echo "VeCanSetup adds CANbus ports to the Venus OS system"
-	echo "$gxDevice includes $builtInPorts CANbus ports"
-	if $limitedPorts; then
-		echo "$configurablePorts additional ports may be added"
-	else
-		echo "an unlimited number of additional ports may be added"
-	fi
-	if $hatsOk ;then
-		echo "one single or dual CANbus hat can be configured by this script"
-	fi
+    echo
+    echo "VeCanSetup adds CANbus ports to the Venus OS system"
+    echo "$gxDevice includes $builtInPorts CANbus ports"
+    if $limitedPorts; then
+        echo "$configurablePorts additional ports may be added"
+    else
+        echo "an unlimited number of additional ports may be added"
+    fi
+    if $hatsOk ;then
+        echo "one single or dual CANbus hat can be configured by this script"
+    fi
 
-	standardActionPrompt MORE_PROMPTS 
+    standardActionPrompt MORE_PROMPTS 
 
-	while true ; do
-		# display initial port definitions
-		displayConfigurations
+    while true ; do
+        # display initial port definitions
+        displayConfigurations
 
-		# compute avaiable actions
-		updatePortCounts
+        # compute avaiable actions
+        updatePortCounts
 
-		echo "Available actions:"
-		if $addUsbOk || $addHatOk ; then
-			echo "  Add a USB interface (a <interface>)"
-		fi
-		if $hatDefined || (($usbPortCount > 0)) ; then
-			echo "  Delete existing interface (d <interface>)"
-		fi
-		echo "interface may optionally be added to the action, (e.g. a hat or d 11)"
-		if $limitedPorts; then
-			echo "USB interface must be 0 or 1"
-		else
-			echo "USB interface must be 10 or greater"
-		fi
-		if $hatsOk ; then
-			echo "Hat interface should be entered as 'h' or 'hat'"
-		fi
-		echo
-		read -p "Choose action from list above or (cr) if done with changes: " action interface
-		if [ -z $action ]; then
-			break
-		fi
-		case $action in
-			[aA]*)
-				action="add"
-				;;
-			[dD]*)
-				action="delete"
-				;;
-			*)
-				action=""
-				echo "invalid action, please try again"
-				continue
-				;;
-		esac
+        echo "Available actions:"
+        if $addUsbOk || $addHatOk ; then
+            echo "  Add a USB interface (a <interface>)"
+        fi
+        if $hatDefined || (($usbPortCount > 0)) ; then
+            echo "  Delete existing interface (d <interface>)"
+        fi
+        echo "interface may optionally be added to the action, (e.g. a hat or d 11)"
+        if $limitedPorts; then
+            echo "USB interface must be 0 or 1"
+        else
+            echo "USB interface must be 10 or greater"
+        fi
+        if $hatsOk ; then
+            echo "Hat interface should be entered as 'h' or 'hat'"
+        fi
+        echo
+        read -p "Choose action from list above or (cr) if done with changes: " action interface
+        if [ -z $action ]; then
+            break
+        fi
+        case $action in
+            [aA]*)
+                action="add"
+                ;;
+            [dD]*)
+                action="delete"
+                ;;
+            *)
+                action=""
+                echo "invalid action, please try again"
+                continue
+                ;;
+        esac
 
-		if [ -z $interface ]; then
-			read -p "Enter interface: " interface
-			if [ -z $interface ]; then
-				echo " add operation canceled"
-				continue
-			fi
-		fi
-		if [[ "$interface" == "h"* ]]; then
-			if [ "$action" == "add" ] && ! $addHatOk ; then
-				echo "CAN'T ADD HAT INTERFACE - ports not available"
-				sleep 1
-				continue
-			elif [ "$action" == "delete" ] && ! $hatDefined ; then
-				echo "NO HAT INTERFACE defined - nothing deleted"
-				sleep 1
-				continue
-			fi
-			port="hat"
-		else
-			if [ "$action" == "add" ] && ! $addUsbOk ; then
-				echo "CAN'T ADD USB INTERFACE - ports not available"
-				sleep 1
-				continue
-			elif [ "$action" == "delete" ] && (($usbPortCount == 0)) ; then
-				echo "NO USB INTERFACE defined - nothing deleted"
-				sleep 1
-				continue
-			fi
-			port="can"
-			while true ; do
-				if [[ "$interface" == "can"* ]]; then
-					portNumber=$(echo $interface | sed -n -e 's/^can//p')
-				else
-					portNumber=$interface
-				fi
-				if ! [[ $portNumber =~ ^[0-9]+$ ]]; then
-					echo "invalid number, try again"
-				elif (( $portNumber >= $firstConfigurablePort)) \
-						&& ( ! $limitedPorts || (( $portNumber < 2 )) ); then
-					port="can$portNumber"
-					break
-				else
-					echo "number out of range, try again"
-				fi
-				if $hatsOk ; then
-					read -p "Enter number of port to add (e.g. 15) or 'hat' for Rpi Hat: " interface
-				else
-					read -p "Enter number of port to add (e.g. 15): " interface
-				fi
-				if [ -z $interface ]; then
-					echo " add operation canceled"
-					break
-				fi
-			done
-		fi
+        if [ -z $interface ]; then
+            read -p "Enter interface: " interface
+            if [ -z $interface ]; then
+                echo " add operation canceled"
+                continue
+            fi
+        fi
+        if [[ "$interface" == "h"* ]]; then
+            if [ "$action" == "add" ] && ! $addHatOk ; then
+                echo "CAN'T ADD HAT INTERFACE - ports not available"
+                sleep 1
+                continue
+            elif [ "$action" == "delete" ] && ! $hatDefined ; then
+                echo "NO HAT INTERFACE defined - nothing deleted"
+                sleep 1
+                continue
+            fi
+            port="hat"
+        else
+            if [ "$action" == "add" ] && ! $addUsbOk ; then
+                echo "CAN'T ADD USB INTERFACE - ports not available"
+                sleep 1
+                continue
+            elif [ "$action" == "delete" ] && (($usbPortCount == 0)) ; then
+                echo "NO USB INTERFACE defined - nothing deleted"
+                sleep 1
+                continue
+            fi
+            port="can"
+            while true ; do
+                if [[ "$interface" == "can"* ]]; then
+                    portNumber=$(echo $interface | sed -n -e 's/^can//p')
+                else
+                    portNumber=$interface
+                fi
+                if ! [[ $portNumber =~ ^[0-9]+$ ]]; then
+                    echo "invalid number, try again"
+                elif (( $portNumber >= $firstConfigurablePort)) \
+                        && ( ! $limitedPorts || (( $portNumber < 2 )) ); then
+                    port="can$portNumber"
+                    break
+                else
+                    echo "number out of range, try again"
+                fi
+                if $hatsOk ; then
+                    read -p "Enter number of port to add (e.g. 15) or 'hat' for Rpi Hat: " interface
+                else
+                    read -p "Enter number of port to add (e.g. 15): " interface
+                fi
+                if [ -z $interface ]; then
+                    echo " add operation canceled"
+                    break
+                fi
+            done
+        fi
 
-		if [ $action == "add" ]; then
-			if [ "$port" == "hat" ]; then
-				addHatConfig
-			else
-				addUsbConfig "$port"
-			fi
-		else
-			if $hatDefined || (($usbPortCount > 0)) ; then
-				deleteConfig $port
-			else
-				echo "$port not found - NOTHING TO DELETE"
-				sleep 1
-				continue
-			fi
-		fi
-	done
+        if [ $action == "add" ]; then
+            if [ "$port" == "hat" ]; then
+                addHatConfig
+            else
+                addUsbConfig "$port"
+            fi
+        else
+            if $hatDefined || (($usbPortCount > 0)) ; then
+                deleteConfig $port
+            else
+                echo "$port not found - NOTHING TO DELETE"
+                sleep 1
+                continue
+            fi
+        fi
+    done
 
-	# mark new configurations have been created
-	touch "$setupOptionsDir/newOptionsSet"
-	scriptAction='INSTALL'
+    # mark new configurations have been created
+    touch "$setupOptionsDir/newOptionsSet"
+    scriptAction='INSTALL'
 
-fi	#end scriptAction == NONE
+fi    #end scriptAction == NONE
 
 #### installling
 if [ $scriptAction == 'INSTALL' ] ; then
     logMessage "installing CANbus ports"
     updateCanFiles
-	if ! $runningAtBoot ; then
-		if $filesUpdated || $rebootNeeded ; then
-			echo
-			echo "new interfaces will not become active until after a reboot"
-			rebootNeeded=true
-		fi
-	fi
+    if ! $runningAtBoot ; then
+        if $filesUpdated || $rebootNeeded ; then
+            echo
+            echo "new interfaces will not become active until after a reboot"
+            rebootNeeded=true
+        fi
+    fi
 fi
 
 #### uninstalling - check scriptAction again
@@ -1258,7 +1258,7 @@ fi
 
 # handle quit command after reporting status
 if [ $scriptAction == 'EXIT' ] ; then
-	exit $EXIT_SUCCESS
+    exit $EXIT_SUCCESS
 fi
 
 # thats all folks - SCRIPT EXITS INSIDE THE FUNCTION
