@@ -1,3 +1,3 @@
-PiCAN-M Hat (2 channels)
+PiCAN-M Rev B 2.0 Hat (2 channels)
     channel 1: NAME1_PH DEVICE1_PH spi0.0
     channel 2: NAME2_PH DEVICE2_PH spi1.0
