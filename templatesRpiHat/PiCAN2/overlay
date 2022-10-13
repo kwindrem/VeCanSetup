@@ -1,11 +1,10 @@
 #### begin CAN overlay
-# PiCAN-M Rev B 2.0 CANbus Hat (1 CAN-bus, 1 RS422 channel)
-# instantiates as can0 ONLY !!!
+# iCAN2 DUO SMPS Rev D V1.4 (2 CAN-bus channels)
+# instantiates as can0 and can1 ONLY !!!
 # use udev rules to rename
 [all]
-enable_uart=1
-dtparam=i2c_arm=on
 dtparam=spi=on
 dtoverlay=mcp2515-can0,oscillator=16000000,interrupt=25,spimaxfrequency=500000
+dtoverlay=mcp2515-can1,oscillator=16000000,interrupt=24,spimaxfrequency=500000
 dtoverlay=spi-bcm2835-overlay
 #### end CAN overlay

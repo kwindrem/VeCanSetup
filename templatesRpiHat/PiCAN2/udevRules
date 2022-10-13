@@ -1,4 +1,4 @@
-# udev rules for PiCAN-M Rev B 2.0 2-channel CANbus interface
+# udev rules for PiCAN2 DUO SMPS Rev D V1.4 (2 CAN-bus channels) CANbus interface
 
 # replace ...PH (place holder) with actual values
 # DELETE the placeholder lines if they aren't used !!
@@ -12,4 +12,14 @@ ACTION=="add", SUBSYSTEM=="net",\
     NAME1_PH\
     DEVICE1_PH\
     spi0.0\
+    "
+# find channel 2 interface and move to specified device
+ACTION=="add", SUBSYSTEM=="net",\
+  KERNELS=="spi1.0",\
+  NAME="DEVICE2_PH",\
+  ENV{VE_NAME}="NAME2_PH",\
+  RUN+="/usr/bin/logger [udev] CANbus device added:\
+    NAME2_PH\
+    DEVICE2_PH\
+    spi1.0\
     "
