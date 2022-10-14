@@ -1,3 +1,6 @@
+v3.2:
+	add PiCAN-M hat
+
 v3.1:
 	fixed: typo in udev rules for GsUsb interfaces preventing startup prior to v2.90
 
