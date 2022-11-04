@@ -7,10 +7,10 @@
 # find interface and connect directly to CANbus port
 ACTION=="add", SUBSYSTEM=="net",\
   KERNELS=="spi0.0",\
-  NAME="DEVICE_PH",\
-  ENV{VE_NAME}="NAME_PH",\
+  NAME="DEVICE1_PH",\
+  ENV{VE_NAME}="NAME1_PH",\
   RUN+="/usr/bin/logger [udev] CANbus device added:\
-    NAME_PH\
-    DEVICE_PH\
+    NAME1_PH\
+    DEVICE1_PH\
     spi0.0\
     "
