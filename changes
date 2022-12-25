@@ -1,3 +1,6 @@
+v3.4:
+	fixed: CANbus hats not handled properly prior to v2.90
+
 v3.3:
 	fixed: "NAME_PH" shown for Waveshare 12 MHz Hat instead of custom name
 

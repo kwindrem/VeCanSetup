@@ -49,16 +49,11 @@ deviceVendorId=""
 deviceModelId=""
 deviceSerialNumber=""
 firstConfigurablePort=0
-limitedPorts=true
 
 usbPortCount=0
 hatDefined=false
 addHatOk=false
 addUsbOk=false
-
-installServices=false
-manageCanbusPortsFile=false
-supportPortName=false
 
 # CAN interface templates - must be set after sourcing CommonResources
 gsUsbTemplatesDir="$scriptDir/templatesGsUsb"
@@ -420,7 +415,7 @@ addUsbConfig ()
     fi
 
     # prompt for port name
-    if $supportPortName ; then
+    if $osAutoConfig ; then
         /bin/echo -n "enter optional name for $port (cr for none): "
         read portName
     else
@@ -494,6 +489,61 @@ addUsbConfig ()
 }
 
 
+
+# add services if port is active and if service does not already exist
+# remove service if port is not active
+# for v2.90~18 and newer, OS manages services so don't add them here
+
+function updateServices ()
+{
+	local port
+	local portNumber
+	local activeService
+
+	if $osAutoConfig ; then
+		return
+	fi
+
+    for (( portNumber = builtInPorts ; portNumber < configurablePorts; portNumber++ )) ; do
+        port="can$portNumber"
+		if (( $(grep -c $port "$veCanPortsFile") > 0 )); then
+			activeService=true
+		else
+			activeService=false
+		fi
+		for service in $services; do
+			destDir="$serviceDir/$service.$port"
+			if $activeService ; then
+				if [ ! -d "$destDir" ]; then
+					serviceTemplate="$venusDir/service-templates/$service"
+					tempServiceDir="$scriptDir/tempService.$port"
+					# template exists (v2.80 and beyond), take service source from there
+					if [ -d "$serviceTemplate" ]; then
+						srcDir="$venusDir/service-templates/$service"
+					# otherwise assume service template is in the service's main directory
+					else
+						srcDir="$venusDir/$service/service"
+					fi
+					if [ -d "$srcDir" ] ; then
+						logMessage "creating $service.$port"
+						cp -r "$srcDir" "$tempServiceDir"
+						sed -i -e s/DEV/$port/ "$tempServiceDir/run"
+						sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
+						rm -rf  "$serviceDir/$service.$port"
+						mv "$tempServiceDir" "$destDir"
+						filesUpdated=true
+					fi
+				fi
+			elif [ -d "$destDir" ] ; then
+				logMessage "removing $service.$port"
+				svc -d "$destDir"
+				filesUpdated=true
+				rm -rf "$destDir"
+			fi
+		done
+	done
+}
+
 # updateCanFiles either installs or removes files associted with each port
 # the install/remove decision is based on the presence of a configuration for each port
 # a package uninstall ignores the configuration and removes the port files
@@ -537,6 +587,7 @@ updateCanFiles ()
         rm -f "$binDir/startSpiCan.sh"
         
         rm -f "$veUdevRulesFile"
+        rm -f "/etc/venus/newUdevRules"
 
     # installing
     else
@@ -553,82 +604,56 @@ updateCanFiles ()
         cp "$scriptDir/scripts/stopSlcand.sh" $binDir
         cp "$scriptDir/scripts/startSpiCan.sh" $binDir
 
-        # tell the start scripts this system is using new udev rules
-        touch "/etc/venus/newUdevRules"
+        # tell the start scripts this system is using new udev rules - OS handles some things itself
+        if $osAutoConfig ; then
+			touch "/etc/venus/newUdevRules"
+		else
+			rm -f "/etc/venus/newUdevRules"
+		fi
     fi
 
     # create new empty temp ports file to add ports to (if any)
     echo -n "" > "$scriptDir/tempPorts"
     # add built-in ports to temp ports file
     for (( portNumber = 0 ; portNumber < builtInPorts; portNumber++ )) ; do
-        echo "$can$portNumber" >> "$scriptDir/tempPorts"
+        echo "can$portNumber" >> "$scriptDir/tempPorts"
     done
 
     # create new empty udev rules file - rules will be added below
     echo -n "" > "$scriptDir/udevRules"
 
-    local configs=$(ls -d "$configsDir/$port"*.config)
-    local config
-    for config in $configs ; do
-        port=$(basename    "$config")
+    local configs=$(ls -d "$configsDir/"*.config 2> /dev/null)
+    for configDir in $configs ; do
+        local port=$(basename "$configDir" | sed -e 's/.config//')
 
         # treat uninstall as if there is nothing specified for the port
         if $uninstallAllPorts ; then
             portDefined=false
         # config must be new one (isNewConfig file exists) or it will be ignored
-        elif [ -f "$config/isNewConfig" ]; then
+        elif [ -f "$configDir/isNewConfig" ]; then
             portDefined=true
         else
-            logMessage "$port config is old format -- can't install" 
+            logMessage "$port config is old format -- can't install"
+            logMessage "run again from command line, delete $port and add it back to update config"
             portDefined=false
         fi
 
         # add configured ports to port list
-        local portName=$(echo "$port" | sed -e 's/.config//')
-        if $portDefined && [ "$port" != "hat.config" ]; then
-            echo "$portName" >> "$scriptDir/tempPorts"
+        # hats may have one or two ports and their names are based on built-in ports - and stored in a config file
+        if $portDefined ; then
+			if [ "$port" == "hat" ]; then
+				cat "$configDir/ports" >> "$scriptDir/tempPorts"
+			# other interfaces are single port and their port names are the port identifier from the config name
+			else
+				echo $port >> "$scriptDir/tempPorts"
+			fi
         fi
 
-        if $portDefined && [ -f "$config/udevRules" ]; then
-            logMessage "adding udev rules for $portName"
-            cat "$config/udevRules" >> "$scriptDir/udevRules"
+        if $portDefined && [ -f "$configDir/udevRules" ]; then
+            logMessage "adding udev rules for $port"
+            cat "$configDir/udevRules" >> "$scriptDir/udevRules"
         fi
 
-        # add service if port is active and if service does not already exist
-        # remove service if port is not active
-        # for v2.90~18 and newer, OS manages services so don't add them here
-        if $installServices ; then
-            for service in $services; do
-                destDir="$serviceDir/$service.$port"
-                if $portDefined ; then
-                    if [ ! -d "$destDir" ]; then
-                        serviceTemplate="$venusDir/service-templates/$service"
-                        tempServiceDir="$scriptDir/tempService.$port"
-                        # template exists (v2.80 and beyond), take service source from there
-                        if [ -d "$serviceTemplate" ]; then
-                            srcDir="$venusDir/service-templates/$service"
-                        # otherwise assume service template is in the service's main directory
-                        else
-                            srcDir="$venusDir/$service/service"
-                        fi
-                        if [ -d "$srcDir" ] ; then
-                            logMessage "creating $service.$port"
-                            cp -r "$srcDir" "$tempServiceDir"
-                            sed -i -e s/DEV/$port/ "$tempServiceDir/run"
-                            sed -i -e s/DEV/$port/ "$tempServiceDir/log/run"
-                            rm -rf  "$serviceDir/$service.$port"
-                            mv "$tempServiceDir" "$destDir"
-                            filesUpdated=true
-                        fi
-                    fi
-                elif [ -d "$destDir" ] ; then
-                    logMessage "removing $service.$port"
-                    svc -d "$destDir"
-                    filesUpdated=true
-                    rm -rf "$destDir"
-                fi
-            done
-        fi
     done
 
     # if any ports have udev rules, write the combined rules file to /etc/udev/rules.d
@@ -644,7 +669,7 @@ updateCanFiles ()
     rm -f "$scriptDir/udevRules"
 
     # v2.90~18 and newer don't use the canbus_ports file !
-    if $manageCanbusPortsFile ; then
+    if ! $osAutoConfig ; then
         if $uninstallAllPorts ; then
             restoreActiveFile "$veCanPortsFile"
         else
@@ -696,6 +721,8 @@ updateCanFiles ()
             rebootNeeded=true
         fi
     fi
+
+	updateServices
 }
 
 
@@ -777,8 +804,12 @@ addHatConfig ()
         isDualChannel=false
     fi
 
+    # assign dedicated hat ports out of the way of OS auto config
+    if $osAutoConfig ; then
+        firstHatPort=8
+        secondHatPort=9
     # for limited ports assign based on other port assigments
-    if $limitedPorts ; then
+	else
         local can0inUse
         local can1inUse
         firstHatPort=-1
@@ -794,19 +825,14 @@ addHatConfig ()
             can1inUse=false
         fi
 
-
         if ! $can0inUse ; then
             firstHatPort=0
             if ! $can1inUse ; then
-                secondHatPort=-1
+                secondHatPort=1
             fi
         elif $can1inUse ; then
             firstHatPort=1
         fi
-    # for unlimited ports, assign dedicated hat ports
-    else
-        firstHatPort=8
-        secondHatPort=9
     fi
     local firstDevice="can$firstHatPort"
     local secondDevice="can$secondHatPort"
@@ -823,7 +849,7 @@ addHatConfig ()
             fi
         fi
     fi
-    if $supportPortName ; then
+    if $osAutoConfig ; then
         if $isDualChannel ; then
             echo
             read -p "Enter optional name for first port on this Hat (cr for none): " firstPortName
@@ -874,18 +900,18 @@ addHatConfig ()
     
     # update/create configuration - use temp file until all operations are complete
     local tempConfigDir="$configsDir/temp.config"
-    cp -r $template "$hatConfig"
     rm -rf "$tempConfigDir"
     cp -r "$template" "$tempConfigDir"
 
     local udevFile="$tempConfigDir/udevRules"
     local descriptionFile="$tempConfigDir/description"
     local overlayFile="$tempConfigDir/overlay"
-    local device="can$firstHatPort"
+    local portsFile="$tempConfigDir/ports"
 
-    sed -i -e s/DEVICE1_PH/"$device"/ "$udevFile"
-    sed -i -e s/DEVICE1_PH/"$device"/ "$descriptionFile"
-    if $supportPortName && [ ! -z "$firstPortName" ]; then
+    sed -i -e s/DEVICE1_PH/"$firstDevice"/ "$udevFile"
+    sed -i -e s/DEVICE1_PH/"$firstDevice"/ "$descriptionFile"
+    echo $firstDevice > "$portsFile"
+    if $osAutoConfig && [ ! -z "$firstPortName" ]; then
         sed -i -e s/NAME1_PH/"$firstPortName"/ "$udevFile"
         sed -i -e s/NAME1_PH/"$firstPortName"/ "$descriptionFile"
     else
@@ -894,10 +920,9 @@ addHatConfig ()
     fi
     if $isDualChannel ; then
         if (( $secondHatPort >= 0 )); then
-            local device="can$secondHatPort"
-            sed -i -e s/DEVICE2_PH/"$device"/ "$udevFile"
-            sed -i -e s/DEVICE2_PH/"$device"/ "$descriptionFile"
-            if $supportPortName && [ ! -z "$secondPortName" ]; then
+            sed -i -e s/DEVICE2_PH/"$secondDevice"/ "$udevFile"
+            sed -i -e s/DEVICE2_PH/"$secondDevice"/ "$descriptionFile"
+            if $osAutoConfig && [ ! -z "$secondPortName" ]; then
                 sed -i -e s/NAME2_PH/"$secondPortName"/ "$udevFile"
                 sed -i -e s/NAME2_PH/"$firstPortName"/ "$descriptionFile"
             else
@@ -908,6 +933,7 @@ addHatConfig ()
             sed -i -e '/can1/ d' "$overlayFile"
             sed -1 -e 's/channel 2: .*/channel 2 not configured/' "$descriptionFile"
         fi
+		echo $secondDevice >> "$portsFile"
     fi
 
     # move modified config into position
@@ -1013,7 +1039,9 @@ updatePortCounts ()
         hatDefined=false
         addHatOk=true
     fi
-    if $limitedPorts ; then
+    if $osAutoConfig ; then
+        addUsbOk=true
+	else
         # hats use same ports as USB interfaces prior to v2.90 so count them as well
         if $hatDefined; then
             (( portCount += $(grep -c "can" "$hatConfig/description") ))
@@ -1024,8 +1052,6 @@ updatePortCounts ()
             addUsbOk=false
             addHatOk=false
         fi
-    else
-        addUsbOk=true
     fi
 }
 
@@ -1075,40 +1101,37 @@ if [ $scriptAction == 'NONE' ] || [ $scriptAction == 'INSTALL' ] ; then
     # for v2.90~18 and newer there is no limit
     versionStringToNumber "v2.90~18"
     if (( $venusVersionNumber < $versionNumber )); then
-        limitedPorts=true
+        osAutoConfig=false
         if (( $builtInPorts >= 2 )) ; then
             logMessage "can't add additional CANbus ports - exiting"
             exit $EXIT_INCOMPATIBLE_PLATFOM
         fi
         firstConfigurablePort=builtInPorts
-        installServices=true
-        manageCanbusPortsFile=true
-        supportPortName=false
-        newRules=false
         (( configurablePorts = 2 - $firstConfigurablePort ))
     else
-        limitedPorts=false
+        osAutoConfig=true
         firstConfigurablePort=10
-        installServices=false
-        manageCanbusPortsFile=false
-        supportPortName=true
-        newRules=true
         configurablePorts=99999
     fi
 fi
+
 
 #### running manually - prompt for input
 if [ $scriptAction == 'NONE' ] ; then
     echo
     echo "VeCanSetup adds CANbus ports to the Venus OS system"
     echo "$gxDevice includes $builtInPorts CANbus ports"
-    if $limitedPorts; then
-        echo "$configurablePorts additional ports may be added"
+    if $osAutoConfig; then
+        echo "an unlimited number of USB ports may be configured"
     else
-        echo "an unlimited number of additional ports may be added"
+        echo "$configurablePorts additional ports may be configured"
     fi
     if $hatsOk ;then
-        echo "one single or dual CANbus hat can be configured by this script"
+		if (($configurablePorts > 2 )); then
+			echo "one single or dual CANbus hat may be configured"
+		elif (($configurablePorts > 1 )); then
+			echo "one single CANbus hat may be configured"
+		fi
     fi
 
     standardActionPrompt MORE_PROMPTS 
@@ -1128,10 +1151,10 @@ if [ $scriptAction == 'NONE' ] ; then
             echo "  Delete existing interface (d <interface>)"
         fi
         echo "interface may optionally be added to the action, (e.g. a hat or d 11)"
-        if $limitedPorts; then
-            echo "USB interface must be 0 or 1"
-        else
+        if $osAutoConfig; then
             echo "USB interface must be 10 or greater"
+        else
+            echo "USB interface must be 0 or 1"
         fi
         if $hatsOk ; then
             echo "Hat interface should be entered as 'h' or 'hat'"
@@ -1193,7 +1216,7 @@ if [ $scriptAction == 'NONE' ] ; then
                 if ! [[ $portNumber =~ ^[0-9]+$ ]]; then
                     echo "invalid number, try again"
                 elif (( $portNumber >= $firstConfigurablePort)) \
-                        && ( ! $limitedPorts || (( $portNumber < 2 )) ); then
+                        && ( $osAutoConfig || (( $portNumber < 2 )) ); then
                     port="can$portNumber"
                     break
                 else
