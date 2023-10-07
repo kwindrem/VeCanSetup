@@ -1,3 +1,6 @@
+v3.6:
+	added Waveshare single channel hat 16 MHz crystal
+
 v3.5:
 	improve prompting for selecing an action (add, delete, done)
 
