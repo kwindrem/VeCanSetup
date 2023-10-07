@@ -1,3 +1,6 @@
+v3.5:
+	improve prompting for selecing an action (add, delete, done)
+
 v3.4:
 	fixed: CANbus hats not handled properly prior to v2.90
 

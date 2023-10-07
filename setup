@@ -486,6 +486,7 @@ addUsbConfig ()
     rm -rf "$portConfigDir"
     mv "$tempConfigDir" "$portConfigDir"
     logMessage "$port configuration updated"
+	changes=true
 }
 
 
@@ -940,6 +941,7 @@ addHatConfig ()
     rm -rf "$hatConfig"
     mv "$tempConfigDir" "$hatConfig"
     logMessage "Hat configuration updated"
+	changes=true
 }
 
 
@@ -977,7 +979,7 @@ displayConfigurations ()
 
         ((count += 1))
         descriptionFile="$config/description"
-        description="interface: $port ) "
+        description="interface: ( $port ) "
         if [ ! -f "$descriptionFile" ]; then
             description+="ERROR: no description file"
             echo $description
@@ -1007,6 +1009,7 @@ deleteConfig ()
     if [ -e "$config" ]; then
         logMessage "deleting $port"
         rm -rf  "$config"
+        changes=true
     else
         echo "configuration for $port not found - nothing deleted"
     fi
@@ -1136,6 +1139,7 @@ if [ $scriptAction == 'NONE' ] ; then
 
     standardActionPrompt MORE_PROMPTS 
 
+	changes=false
     while true ; do
         # display initial port definitions
         displayConfigurations
@@ -1150,6 +1154,8 @@ if [ $scriptAction == 'NONE' ] ; then
         if $hatDefined || (($usbPortCount > 0)) ; then
             echo "  Delete existing interface (d <interface>)"
         fi
+        echo "  blank line if done with changes"
+		echo
         echo "interface may optionally be added to the action, (e.g. a hat or d 11)"
         if $osAutoConfig; then
             echo "USB interface must be 10 or greater"
@@ -1160,7 +1166,7 @@ if [ $scriptAction == 'NONE' ] ; then
             echo "Hat interface should be entered as 'h' or 'hat'"
         fi
         echo
-        read -p "Choose action from list above or (cr) if done with changes: " action interface
+        read -p "Choose action from list above: " action interface
         if [ -z $action ]; then
             break
         fi
@@ -1252,8 +1258,18 @@ if [ $scriptAction == 'NONE' ] ; then
     done
 
     # mark new configurations have been created
-    touch "$setupOptionsDir/newOptionsSet"
-    scriptAction='INSTALL'
+	if ! $changes ; then
+		yesNoPrompt "no changes to configuration - install anyway (y/n)?: "
+		if $yesResponse ; then
+			changes=true
+		fi
+	fi
+    if $changes ; then
+		touch "$setupOptionsDir/newOptionsSet"
+		scriptAction='INSTALL'
+	else
+		scriptAction='EXIT'
+	fi
 
 fi    #end scriptAction == NONE
 
