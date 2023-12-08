@@ -1,4 +1,4 @@
-v3.7: (pending)
+v3.7:
 	fixed: selecting uninstall (u) doesn't work
 	correct manual install instructions in ReadMe
 
