@@ -691,7 +691,7 @@ updateCanFiles ()
             hatDefined=false
         fi
         configFile="/u-boot/config.txt"
-        if [ $(grep -c "#### begin CAN overlay" "$configFile") != 0 ]; then
+        if (( $(grep -c "#### begin CAN overlay" "$configFile") != 0 )); then
             removeOverlay=true
             oldOverlayText=$(sed -n -e "/#### begin CAN overlay/,/#### end CAN overlay/p" "$configFile")
         else
@@ -1060,46 +1060,46 @@ updatePortCounts ()
 
 ######## script code begins here  ########
 
-# setup enviroment for manual ops or install
-if [ $scriptAction == 'NONE' ] || [ $scriptAction == 'INSTALL' ] ; then
+# setup enviroment
+if [ -f /etc/venus/machine ]; then
+	machine=$(cat /etc/venus/machine)
+	case $machine in
+		raspberrypi*)
+			builtInPorts=0
+			hatsOk=true
+			gxDevice="Raspberry PI"
+			;;
+		einstein)
+			builtInPorts=2
+			hatsOk=false
+			gxDevice="Cerbo GX"
+			;;
+		cerbosgx)
+			builtInPorts=1
+			hatsOk=false
+			gxDevice="Cerbo GX S"
+			;;
+		beaglebone)
+			builtInPorts=2
+			hatsOk=false
+			gxDevice="Venus GX"
+			;;
+		ccgx)
+			builtInPorts=1
+			hatsOk=false
+			gxDevice="CCGX"
+			;;
+		*)
+			logMessage "unsupported Venus device type $machine - exiting"
+			exit $EXIT_INCOMPATIBLE_PLATFOM
+		;;
+	esac
+else
+	logMessage "can't determine Venus device type - exiting"
+	exit $EXIT_INCOMPATIBLE_PLATFOM
+fi
 
-    if [ -f /etc/venus/machine ]; then
-        machine=$(cat /etc/venus/machine)
-        case $machine in
-            raspberrypi*)
-                builtInPorts=0
-                hatsOk=true
-                gxDevice="Raspberry PI"
-                ;;
-            einstein)
-                builtInPorts=2
-                hatsOk=false
-                gxDevice="Cerbo GX"
-                ;;
-            cerbosgx)
-                builtInPorts=1
-                hatsOk=false
-                gxDevice="Cerbo GX S"
-                ;;
-            beaglebone)
-                builtInPorts=2
-                hatsOk=false
-                gxDevice="Venus GX"
-                ;;
-            ccgx)
-                builtInPorts=1
-                hatsOk=false
-                gxDevice="CCGX"
-                ;;
-            *)
-                logMessage "unsupported Venus device type $machine - exiting"
-                exit $EXIT_INCOMPATIBLE_PLATFOM
-            ;;
-        esac
-    else
-        logMessage "can't determine Venus device type - exiting"
-        exit $EXIT_INCOMPATIBLE_PLATFOM
-    fi
+if [ $scriptAction == 'NONE' ] || [ $scriptAction == 'INSTALL' ] ; then
     # number of ports is 2 prior to v2.90~18
     # for v2.90~18 and newer there is no limit
     versionStringToNumber "v2.90~18"
@@ -1117,7 +1117,6 @@ if [ $scriptAction == 'NONE' ] || [ $scriptAction == 'INSTALL' ] ; then
         configurablePorts=99999
     fi
 fi
-
 
 #### running manually - prompt for input
 if [ $scriptAction == 'NONE' ] ; then
@@ -1138,7 +1137,9 @@ if [ $scriptAction == 'NONE' ] ; then
     fi
 
     standardActionPrompt MORE_PROMPTS 
-
+fi
+# if user didn't request uninstall, continue prompting
+if [ $scriptAction == 'NONE' ] ; then
 	changes=false
     while true ; do
         # display initial port definitions

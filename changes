@@ -1,3 +1,7 @@
+v3.7: (pending)
+	fixed: selecting uninstall (u) doesn't work
+	correct manual install instructions in ReadMe
+
 v3.6:
 	added Waveshare single channel hat 16 MHz crystal
 
