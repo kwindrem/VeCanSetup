@@ -1,3 +1,7 @@
+v3.8:
+	updated setup script to use optionsSet (no functional changes)
+		newOptionsSet was needed to cover a transition which has long since past
+
 v3.7:
 	fixed: selecting uninstall (u) doesn't work
 	correct manual install instructions in ReadMe

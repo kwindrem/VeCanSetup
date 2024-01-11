@@ -37,14 +37,6 @@ source "/data/SetupHelper/CommonResources"
 
 #### end of lines to include SetupHelper
 
-# if this is a install without user interaction, exit if new options not present
-if [ $scriptAction == 'INSTALL' ] && [ ! -f "$setupOptionsDir/newOptionsSet" ]; then
-    logMessage "Error: new configs not present - can't allow reinstall"
-    logMessage "must run setup script from command line and configure ports"
-    exit $EXIT_OPTIONS_NOT_SET
-fi
-
-
 deviceVendorId=""
 deviceModelId=""
 deviceSerialNumber=""
@@ -63,9 +55,6 @@ slcanTemplatesDir="$scriptDir/templatesSlcan"
 # storage for port-specific configuraitons
 configsDir="$setupOptionsDir"
 hatConfig="$configsDir/hat.config"
-
-
-#### skip to ######## script code begins here  ########
 
 
 # reports USB device info
@@ -1058,46 +1047,53 @@ updatePortCounts ()
     fi
 }
 
+
 ######## script code begins here  ########
 
-# setup enviroment
-if [ -f /etc/venus/machine ]; then
+# if not set by CommonResources, attempt to get platform here
+# this is here for backward compatiblity with SetupHelper prior fo v5.17
+#	because $machine was only set if a raspberryPi only flag was set for the package
+#	v5.17 always sets it now
+if [ -z $machine ] && [ -f /etc/venus/machine ]; then
 	machine=$(cat /etc/venus/machine)
-	case $machine in
-		raspberrypi*)
-			builtInPorts=0
-			hatsOk=true
-			gxDevice="Raspberry PI"
-			;;
-		einstein)
-			builtInPorts=2
-			hatsOk=false
-			gxDevice="Cerbo GX"
-			;;
-		cerbosgx)
-			builtInPorts=1
-			hatsOk=false
-			gxDevice="Cerbo GX S"
-			;;
-		beaglebone)
-			builtInPorts=2
-			hatsOk=false
-			gxDevice="Venus GX"
-			;;
-		ccgx)
-			builtInPorts=1
-			hatsOk=false
-			gxDevice="CCGX"
-			;;
-		*)
-			logMessage "unsupported Venus device type $machine - exiting"
-			exit $EXIT_INCOMPATIBLE_PLATFOM
-		;;
-	esac
-else
-	logMessage "can't determine Venus device type - exiting"
-	exit $EXIT_INCOMPATIBLE_PLATFOM
 fi
+# setup enviroment ($machine set in CommonResources)
+case $machine in
+	raspberrypi*)
+		builtInPorts=0
+		hatsOk=true
+		gxDevice="Raspberry PI"
+		;;
+	einstein)
+		builtInPorts=2
+		hatsOk=false
+		gxDevice="Cerbo GX"
+		;;
+	ekrano)
+		builtInPorts=2
+		hatsOk=false
+		gxDevice="Ekrano GX"
+		;;
+	cerbosgx)
+		builtInPorts=1
+		hatsOk=false
+		gxDevice="Cerbo GX S"
+		;;
+	beaglebone)
+		builtInPorts=2
+		hatsOk=false
+		gxDevice="Venus GX"
+		;;
+	ccgx)
+		builtInPorts=1
+		hatsOk=false
+		gxDevice="CCGX"
+		;;
+	*)
+		logMessage "unsupported platform $machine - exiting"
+		exit $EXIT_INCOMPATIBLE_PLATFOM
+	;;
+esac
 
 if [ $scriptAction == 'NONE' ] || [ $scriptAction == 'INSTALL' ] ; then
     # number of ports is 2 prior to v2.90~18
@@ -1266,7 +1262,6 @@ if [ $scriptAction == 'NONE' ] ; then
 		fi
 	fi
     if $changes ; then
-		touch "$setupOptionsDir/newOptionsSet"
 		scriptAction='INSTALL'
 	else
 		scriptAction='EXIT'
@@ -1297,6 +1292,7 @@ fi
 
 
 # handle quit command after reporting status
+#	not in CommonResources until SetupHelper v6.0
 if [ $scriptAction == 'EXIT' ] ; then
     exit $EXIT_SUCCESS
 fi
