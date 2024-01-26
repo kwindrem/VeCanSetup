@@ -1,3 +1,6 @@
+v3.9:
+	fixed: Waeshare 2-channel FD Hat not working (at least with some board revs)
+
 v3.8:
 	updated setup script to use optionsSet (no functional changes)
 		newOptionsSet was needed to cover a transition which has long since past
