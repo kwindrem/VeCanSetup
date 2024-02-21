@@ -4,6 +4,6 @@
 # use udev rules to rename
 [all]
 dtoverlay=spi1-3cs
-dtoverlay=mcp251xfd-can0,spi0-0,interrupt=25
-dtoverlay=mcp251xfd-can1,spi1-0,interrupt=23
+dtoverlay=mcp251xfd,spi0-0,interrupt=25
+dtoverlay=mcp251xfd,spi1-0,interrupt=23
 #### end CAN overlay
