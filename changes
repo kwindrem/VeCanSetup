@@ -1,3 +1,6 @@
+v3.12:
+	add spi1-1cs overlay for RPI hats
+
 v3.11:
 	fixed: Waeshare 2-channel FD second interface wrong interrupt pin
 

@@ -710,6 +710,9 @@ updateCanFiles ()
             cat "$config/overlay" >> $configFile
             rebootNeeded=true
         fi
+
+		logMessage "installing spi1-1cs overlay"
+		updateActiveFile "$scriptDir/spi1-1cs.dtbo" "/u-boot/overlays/spi1-1cs.dtbo"
     fi
 
 	updateServices
