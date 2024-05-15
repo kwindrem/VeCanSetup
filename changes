@@ -1,3 +1,6 @@
+v3.13:
+	remove local copy of HelperResources
+
 v3.12:
 	add spi1-1cs overlay for RPI hats
 

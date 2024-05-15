@@ -30,12 +30,9 @@ binDir=/usr/local/bin
 # no log file
 packageLogFile=""
 
-#### following lines incorporate SetupHelper utilities into this script
-# Refer to the SetupHelper ReadMe file for details.
-
-source "/data/SetupHelper/CommonResources"
-
-#### end of lines to include SetupHelper
+#### following line incorporates helper resources into this script
+source "/data/SetupHelper/HelperResources/IncludeHelpers"
+#### end of lines to include helper resources
 
 deviceVendorId=""
 deviceModelId=""
