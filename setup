@@ -455,7 +455,6 @@ addUsbConfig ()
                         yesNoPrompt "Use that serial number (y/n)?: "
                         if $yesResponse ; then
                             serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
-echo "#### serialNumber $serialNumber"
                             break
                         fi
                     fi
