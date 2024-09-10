@@ -385,19 +385,30 @@ addUsbConfig ()
     sed -i -e s/DEVICE_PH/"$port"/ "$udevRules"
     sed -i -e s/DEVICE_PH/"$port"/ "$descriptionFile"
 
-    if $isCustom ; then
+    if $isCustom && ! [ -z "$deviceVendorId" ] && [ "$deviceVendorId" != "" ]; then
         sed -i -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
         sed -i -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
         sed -i -e s/MODEL_PH/"$deviceModelId"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
         sed -i -e s/MODEL_PH/"$deviceModelId"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
+	else
+        sed -i -e '/VENDOR_PH/ d' "$udevRules"
+        sed -i -e 's/ VENDOR_PH//' "$descriptionFile"
+        sed -i -e '/MODEL_PH/ d' "$udevRules"
+        sed -i -e 's/ MODEL_PH//' "$descriptionFile"
     fi
-    if $isSlcan ; then
+    if $isSlcan && ! [ -z "$udevRules" ] && [ "$udevRules" != "" ]; then
         sed -i -e s/PROFILE_PH/"$profile"/ "$udevRules"
         sed -i -e s/PROFILE_PH/"$profile"/ "$descriptionFile"
+	else
+        sed -i -e '/PROFILE_PH/ d' "$udevRules"
+        sed -i -e 's/ PROFILE_PH//' "$descriptionFile"
     fi
-    if $isSlcan && $isCustom ; then
+    if $isSlcan && $isCustom && ! [ -z "$slcandOptions" ] && [ "$slcandOptions" != "" ]; then
         sed -i -e s/SLCAN_OPTIONS_PH/"$slcandOptions"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$udevRules"
         sed -i -e s/SLCAN_OPTIONS_PH/"$slcandOptions"/ -e s/VENDOR_PH/"$deviceVendorId"/ "$descriptionFile"
+	else
+        sed -i -e '/SLCAN_OPTIONS_PH/ d' "$udevRules"
+        sed -i -e 's/ SLCAN_OPTIONS_PH//' "$descriptionFile"
     fi
 
     # prompt for port name
@@ -444,6 +455,7 @@ addUsbConfig ()
                         yesNoPrompt "Use that serial number (y/n)?: "
                         if $yesResponse ; then
                             serialNumber=$(echo "$dmesgInfo" | awk -F: '{print $3}' | xargs)
+echo "#### serialNumber $serialNumber"
                             break
                         fi
                     fi

@@ -1,3 +1,6 @@
+v3.14:
+	fixed: unused udev rules settings not always deleted
+
 v3.13:
 	remove local copy of HelperResources
 
