@@ -1,3 +1,6 @@
+v3.15:
+	add Waveshare CAN Plus hat
+
 v3.14:
 	fixed: unused udev rules settings not always deleted
 

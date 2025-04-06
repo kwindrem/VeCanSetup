@@ -713,14 +713,18 @@ updateCanFiles ()
             sed -i -e "/#### begin CAN overlay/,/#### end CAN overlay/d" "$configFile"
             rebootNeeded=true
         fi
-        if $installOverlay ; then
-            logMessage "adding new CAN hat overlay to config.txt"
-            cat "$config/overlay" >> $configFile
-            rebootNeeded=true
-        fi
+		if [ $scriptAction == 'INSTALL' ]; then
+			if $installOverlay; then
+				logMessage "adding new CAN hat overlay to config.txt"
+				cat "$config/overlay" >> $configFile
+				rebootNeeded=true
+			fi
 
-		logMessage "installing spi1-1cs overlay"
-		updateActiveFile "$scriptDir/spi1-1cs.dtbo" "/u-boot/overlays/spi1-1cs.dtbo"
+			logMessage "installing spi1-1cs overlay"
+			updateActiveFile "$scriptDir/spi1-1cs.dtbo" "/u-boot/overlays/spi1-1cs.dtbo"
+			logMessage "installing generic mc2515 overlay - used for Waveshare CAN + hat (spi1)"
+			updateActiveFile "$scriptDir/mcp2515.dtbo" "/u-boot/overlays/mcp2515.dtbo"
+		fi
     fi
 
 	updateServices

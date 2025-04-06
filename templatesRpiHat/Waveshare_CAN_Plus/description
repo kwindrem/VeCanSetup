@@ -1,0 +1,3 @@
+Waveshare 2-channel CAN Plus Hat
+  channel 1: NAME1_PH DEVICE1_PH spi1.2
+  channel 2: NAME2_PH DEVICE2_PH spi1.1

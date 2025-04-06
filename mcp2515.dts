@@ -1,0 +1,177 @@
+/dts-v1/;
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <0xffffffff>;
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@1 {
+		target = <0xffffffff>;
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@2 {
+		target-path = "spi1/spidev@0";
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@3 {
+		target-path = "spi1/spidev@1";
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@4 {
+		target-path = "spi1/spidev@2";
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@5 {
+		target-path = "spi2/spidev@0";
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@6 {
+		target-path = "spi2/spidev@1";
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@7 {
+		target-path = "spi2/spidev@2";
+
+		__dormant__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@8 {
+		target = <0xffffffff>;
+
+		__overlay__ {
+
+			mcp2515_pins {
+				brcm,pins = <0x19>;
+				brcm,function = <0x00>;
+				phandle = <0x01>;
+			};
+		};
+	};
+
+	fragment@9 {
+		target-path = "/clocks";
+
+		__overlay__ {
+
+			mcp2515-osc {
+				#clock-cells = <0x00>;
+				compatible = "fixed-clock";
+				clock-frequency = <0xf42400>;
+				phandle = <0x02>;
+			};
+		};
+	};
+
+	fragment@10 {
+		target = <0xffffffff>;
+		phandle = <0x03>;
+
+		__overlay__ {
+			status = "okay";
+			#address-cells = <0x01>;
+			#size-cells = <0x00>;
+
+			mcp2515@0 {
+				compatible = "microchip,mcp2515";
+				reg = <0x00>;
+				pinctrl-names = "default";
+				pinctrl-0 = <0x01>;
+				spi-max-frequency = <0x989680>;
+				interrupt-parent = <0xffffffff>;
+				interrupts = <0x19 0x08>;
+				clocks = <0x02>;
+				phandle = <0x04>;
+			};
+		};
+	};
+
+	__overrides__ {
+		spi0-0 = [00 00 00 00 2b 30 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 30 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 30 5f 30 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 30 2d 30 2d 6f 73 63 00];
+		spi0-1 = [00 00 00 00 2b 31 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 31 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 30 5f 31 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 30 2d 31 2d 6f 73 63 00];
+		spi1-0 = [00 00 00 00 2b 32 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 30 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 31 5f 30 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 31 2d 30 2d 6f 73 63 00];
+		spi1-1 = [00 00 00 00 2b 33 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 31 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 31 5f 31 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 31 2d 31 2d 6f 73 63 00];
+		spi1-2 = [00 00 00 00 2b 34 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 32 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 31 5f 32 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 31 2d 32 2d 6f 73 63 00];
+		spi2-0 = [00 00 00 00 2b 35 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 30 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 32 5f 30 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 32 2d 30 2d 6f 73 63 00];
+		spi2-1 = [00 00 00 00 2b 36 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 31 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 32 5f 31 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 32 2d 31 2d 6f 73 63 00];
+		spi2-2 = [00 00 00 00 2b 37 00 00 00 00 03 74 61 72 67 65 74 3a 30 3d 00 ff ff ff ff 00 00 00 04 72 65 67 3a 30 3d 32 00 00 00 00 01 6e 61 6d 65 3d 6d 63 70 32 35 31 35 5f 73 70 69 32 5f 32 5f 70 69 6e 73 00 00 00 00 02 6e 61 6d 65 3d 6d 63 70 32 35 31 35 2d 73 70 69 32 2d 32 2d 6f 73 63 00];
+		oscillator = [00 00 00 02 63 6c 6f 63 6b 2d 66 72 65 71 75 65 6e 63 79 3a 30 00];
+		speed = <0x04 0x7370692d 0x6d61782d 0x66726571 0x75656e63 0x793a3000>;
+		interrupt = [00 00 00 01 62 72 63 6d 2c 70 69 6e 73 3a 30 00 00 00 00 04 69 6e 74 65 72 72 75 70 74 73 3a 30 00];
+	};
+
+	__symbols__ {
+		mcp2515_pins = "/fragment@8/__overlay__/mcp2515_pins";
+		clk_mcp2515_osc = "/fragment@9/__overlay__/mcp2515-osc";
+		mcp2515_frag = "/fragment@10";
+		mcp2515 = "/fragment@10/__overlay__/mcp2515@0";
+	};
+
+	__fixups__ {
+		spidev0 = "/fragment@0:target:0";
+		spidev1 = "/fragment@1:target:0";
+		gpio = "/fragment@8:target:0", "/fragment@10/__overlay__/mcp2515@0:interrupt-parent:0";
+		spi0 = "/fragment@10:target:0", "/__overrides__:spi0-0:21", "/__overrides__:spi0-1:21";
+		spi1 = "/__overrides__:spi1-0:21", "/__overrides__:spi1-1:21", "/__overrides__:spi1-2:21";
+		spi2 = "/__overrides__:spi2-0:21", "/__overrides__:spi2-1:21", "/__overrides__:spi2-2:21";
+	};
+
+	__local_fixups__ {
+
+		fragment@10 {
+
+			__overlay__ {
+
+				mcp2515@0 {
+					pinctrl-0 = <0x00>;
+					clocks = <0x00>;
+				};
+			};
+		};
+
+		__overrides__ {
+			spi0-0 = <0x07 0x19 0x25 0x42>;
+			spi0-1 = <0x07 0x19 0x25 0x42>;
+			spi1-0 = <0x07 0x19 0x25 0x42>;
+			spi1-1 = <0x07 0x19 0x25 0x42>;
+			spi1-2 = <0x07 0x19 0x25 0x42>;
+			spi2-0 = <0x07 0x19 0x25 0x42>;
+			spi2-1 = <0x07 0x19 0x25 0x42>;
+			spi2-2 = <0x07 0x19 0x25 0x42>;
+			oscillator = <0x00>;
+			speed = <0x00>;
+			interrupt = <0x00 0x10>;
+		};
+	};
+};
