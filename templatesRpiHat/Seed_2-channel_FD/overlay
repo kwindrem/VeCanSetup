@@ -1,0 +1,9 @@
+#### begin CAN overlay
+# Seeed 2-Channel CAN-BUS(FD) Shield for Raspberry Pi
+# Uses MCP2517FD/MCP2518FD controllers
+# instantiates as can0 and can1 ONLY !!!
+# use udev rules to rename
+[all]
+dtoverlay=mcp251xfd,spi0-0,interrupt=25
+dtoverlay=mcp251xfd,spi0-1,interrupt=24
+#### end CAN overlay
