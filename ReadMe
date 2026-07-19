@@ -15,18 +15,11 @@ As of Venus OS v2.90~18:
 
 The setup script's actions are:
 
-    Add (or modify) a port's configuraiton
+    Modify port configuraitons (add or delete interfaces, rename, etc.)
         supported interfaces:
-            CANable with Candelight firmware
-            Canberry Hat
-            PCAN-USB (which is also the Victron's CANUSB)
-            PiCan Hat
-            Waveshare Hat
-            Waveshare 2-channel Hat
-            Waveshare 2-channel FD Hat
-			slcan USB device (not recommended)
-				requires customizing parameters
-    Delete a port's configuration
+            USB interfaces using GsLib (recommended)
+            USB interfaces using Slcan (NOT RECOMMENDED !!)
+            various Raspberry PI CANbus single- and dual-channel hat modules
     Install the configured ports into the Venus file system
     Uninstall/restore all Venus files installed by this package
 		leaving the system in a stock configuraiton
@@ -75,8 +68,8 @@ As stated above, slcan-based interfaces should be avoided.
 
 When a template is not available for a specific interface, this script helps this configuration by pulling information
 		from system logs for inserted USB interfaces:
-	Plug a USB slcan CANbus interface into the GX device.
-	Select install, then add then select custom GS USB or slcan device.
+	Plug a USB CANbus interface into the GX device.
+	Select modify, then add then select custom GS USB or slcan device.
 	The system logs are scanned and any potential USB interfaces are reported one at a time.
 	The user is prompted to use this informaiton, or reject it.
 	The process repeats until there are no more entries found in the log.
@@ -105,9 +98,7 @@ Serial numbers:
 Note: I have tested this package with CANable USB Pro interface running slcand, Candelight and PCAN firmware
 	as well as the Waveshare dual-channel CANbus (non FD) Hat on a Raspberry PI 4.
 
-	The configurations for other interfaces were taken from the following link but have not been tested:
-
-		https://github.com/victronenergy/venus/wiki/RaspberryPi-CAN-Interfaces
+	The configurations for other interfaces were taken from various sources including user contributions and are not guaranteed to work.
 
 Obviouslly, Hat interfaces only on Raspberry PI platforms.
 

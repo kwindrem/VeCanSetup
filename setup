@@ -566,7 +566,9 @@ updateCanFiles ()
     fi
     if [ -d "$binDir" ]; then
         files=$(ls "$binDir/"can*add.sh 2> /dev/null)
-        files+=" "
+        if [ ! -z "$files" ]; then
+			files+=" "
+		fi
         files+=$(ls "$binDir/"can*remove.sh 2> /dev/null)
         if [ ! -z "$files" ]; then
             logMessage "removing scripts from old version of VeCanSetup"
@@ -1147,35 +1149,86 @@ if [ $scriptAction == 'NONE' ] ; then
 		fi
     fi
 
-    standardActionPrompt MORE_PROMPTS 
+	# custom top menu (can't use standardActionPrompt)
+    echo
+	displayConfigurations
+	echo
+    echo "Available actions:"
+	# don't allow install choice if incompatibilities have already been detected
+	if ! $installFailed ; then
+		echo "  Modify (m) configuration (add/delete interfaces)"
+		echo "  Install and activate configuraiton shown above (i)"
+	else
+		echo "  can't install - errors reported above"
+	fi
+    if $optionsSet ; then
+        echo "  Reinstall (r) existing configuraiton"
+    fi
+    echo "  Uninstall (u) and restores all files to stock"
+    echo "  Quit (q) without further action"
+    echo "  Display log (l) outputs the last 100 lines of the log"
+    echo
+    response=''
+    while true; do
+        /bin/echo -n "Choose an action from the list above: "
+        read response
+        case $response in
+			[mM]*)
+				scriptAction='MODIFY'
+				break
+				;;
+            [iI]*)
+				if ! $installFailed ; then
+                    scriptAction='INSTALL'
+					break
+				fi
+                ;;
+            [rR]*)
+                if $optionsSet ; then
+                    scriptAction='INSTALL'
+                    break
+                fi
+                ;;
+            [uU]*)
+                scriptAction='UNINSTALL'
+                break
+                ;;
+            [qQ]*)
+                exit $EXIT_SUCCESS
+                ;;
+            [lL]*)
+				tail -100 "$logFile" | tai64nlocal
+                ;;
+            *)
+        esac
+    done
 fi
-# if user didn't request uninstall, continue prompting
-if [ $scriptAction == 'NONE' ] ; then
+
+if [ $scriptAction == 'MODIFY' ] ; then
 	changes=false
     while true ; do
-        # display initial port definitions
-        displayConfigurations
-
         # compute avaiable actions
         updatePortCounts
 
         echo "Available actions:"
-        if $addUsbOk || $addHatOk ; then
-            echo "  Add a USB interface (a <interface>)"
+        if $addUsbOk ; then
+            echo "  Add a USB interface (a <port>)"
+		fi
+        if $addHatOk ; then
+            echo "  Add a hat interface (a hat)"
         fi
-        if $hatDefined || (($usbPortCount > 0)) ; then
-            echo "  Delete existing interface (d <interface>)"
+        if $hatDefined ; then
+            echo "  Delete existing hat interface (d hat)"
+        fi
+        if (($usbPortCount > 0)) ; then
+            echo "  Delete existing USB interface (d <port>)"
         fi
         echo "  blank line if done with changes"
 		echo
-        echo "interface may optionally be added to the action, (e.g. a hat or d 11)"
         if $osAutoConfig; then
-            echo "USB interface must be 10 or greater"
+            echo "USB port must be 10 or greater"
         else
-            echo "USB interface must be 0 or 1"
-        fi
-        if $hatsOk ; then
-            echo "Hat interface should be entered as 'h' or 'hat'"
+            echo "USB port must be 0 or 1"
         fi
         echo
         read -p "Choose action from list above: " action interface
@@ -1197,7 +1250,7 @@ if [ $scriptAction == 'NONE' ] ; then
         esac
 
         if [ -z $interface ]; then
-            read -p "Enter interface: " interface
+            read -p "Enter interface ('hat' or <USB port>): " interface
             if [ -z $interface ]; then
                 echo " add operation canceled"
                 continue
@@ -1209,7 +1262,7 @@ if [ $scriptAction == 'NONE' ] ; then
                 sleep 1
                 continue
             elif [ "$action" == "delete" ] && ! $hatDefined ; then
-                echo "NO HAT INTERFACE defined - nothing deleted"
+                echo "NO HAT INTERFACENO HAT INTERFACE defined - nothing deleted"
                 sleep 1
                 continue
             fi
@@ -1245,7 +1298,7 @@ if [ $scriptAction == 'NONE' ] ; then
                 else
                     read -p "Enter number of port to add (e.g. 15): " interface
                 fi
-                if [ -z $interface ]; then
+                if [ -z "$interface" ]; then
                     echo " add operation canceled"
                     break
                 fi
@@ -1282,11 +1335,16 @@ if [ $scriptAction == 'NONE' ] ; then
 		scriptAction='EXIT'
 	fi
 
-fi    #end scriptAction == NONE
+fi    #end scriptAction == MODIFY
 
 #### installling
 if [ $scriptAction == 'INSTALL' ] ; then
-    logMessage "installing CANbus ports"
+	if $hatDefined || (($usbPortCount > 0)) ; then
+		logMessage "installing CANbus ports"
+		displayConfigurations
+	else
+		logMessage "no CANbus port configurations - returning to OS-based management"
+	fi
     updateCanFiles
     if ! $runningAtBoot ; then
         if $filesUpdated || $rebootNeeded ; then

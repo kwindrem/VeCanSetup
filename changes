@@ -1,3 +1,6 @@
+v3.17:
+	reorganized install/modification prompting to avoid confusion
+
 v3.16:
 	add Seeed 2-channel CanBus FD hat
 
